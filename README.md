@@ -27,7 +27,7 @@ The MacHttpTest application will be in the MacHTTP-build directory.
 ## Credits
 MacHTTP uses code from the following open source projects:
 
-* [autc04/Retro68](https://github.com/autc04/Retro68).
+* [autc04/Retro68](https://github.com/autc04/Retro68)
 * [ARMbed/mbedtls](https://github.com/ARMmbed/mbedtls)
 * [nodejs/http_parser](https://github.com/nodejs/http-parser)
 * [jacketizer/libyuarel](https://github.com/jacketizer/libyuarel)

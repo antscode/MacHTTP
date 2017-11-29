@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdexcept>
+#include <algorithm>
 #include "Uri.h"
 #include "yuarel.h"
 
@@ -38,4 +39,12 @@ Uri::Uri(std::string uriStr)
 			Path = "/" + Path;
 		}
 	}
+}
+
+bool Uri::IsAbsolute(std::string uriStr)
+{
+	// To lowercase for comparison
+	std::transform(uriStr.begin(), uriStr.end(), uriStr.begin(), ::tolower);
+
+	return uriStr.find("http") == 0;
 }

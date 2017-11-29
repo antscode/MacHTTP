@@ -32,7 +32,7 @@ private:
 	HttpResponse Request(Uri uri, std::string request);
 	HttpResponse HttpRequest(Uri uri, std::string request);
 	HttpResponse HttpsRequest(Uri uri, std::string request);
-	HttpResponse CheckRedirect(HttpResponse response);
+	HttpResponse CheckRedirect(Uri uri, HttpResponse response);
 	void InitParser(HttpResponse* response, http_parser* parser, http_parser_settings* settings);
 };
 

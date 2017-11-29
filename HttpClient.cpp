@@ -1,6 +1,5 @@
 #include <ctype.h>
 #include <string.h>
-#include <algorithm>
 #include <mbedtls/net_sockets.h>
 #include <mbedtls/debug.h>
 #include <mbedtls/ssl.h>
@@ -52,10 +51,7 @@ HttpResponse HttpClient::Get(std::string requestUri)
 /* Private functions */
 Uri HttpClient::GetUri(std::string requestUri)
 {
-	// To lowercase for comparison
-	std::transform(requestUri.begin(), requestUri.end(), requestUri.begin(), ::tolower);
-
-	if (requestUri.find("http") != 0)
+	if (!Uri::IsAbsolute(requestUri))
 	{
 		requestUri = _baseUri + requestUri;
 	}
@@ -91,12 +87,19 @@ void HttpClient::InitParser(HttpResponse* response, http_parser* parser, http_pa
 	http_parser_init(parser, HTTP_RESPONSE);
 }
 
-HttpResponse HttpClient::CheckRedirect(HttpResponse response)
+HttpResponse HttpClient::CheckRedirect(Uri uri, HttpResponse response)
 {
 	if (response.StatusCode == 302 && response.Headers.count("Location") > 0)
 	{
+		std::string location = response.Headers["Location"];
+
+		if (!Uri::IsAbsolute(location))
+		{
+			location = uri.Scheme + "://" + uri.Host + location;
+		}
+
 		// Perform 302 redirect
-		return Get(response.Headers["Location"]);
+		return Get(location);
 	}
 
 	return response;
@@ -181,7 +184,7 @@ HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
 
 	response.Success = true;
 
-	return CheckRedirect(response);
+	return CheckRedirect(uri, response);
 }
 
 HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
@@ -325,7 +328,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 
 	response.Success = true;
 
-	return CheckRedirect(response);
+	return CheckRedirect(uri, response);
 }
 
 static int on_body_callback(http_parser* parser, const char *at, size_t length) 
