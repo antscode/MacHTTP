@@ -3,6 +3,7 @@
 #endif
 
 #include <string>
+#include <map>
 
 #pragma once
 class HttpResponse
@@ -10,7 +11,10 @@ class HttpResponse
 public:
 	HttpResponse();
 	bool Success;
+	bool MessageComplete;
+	unsigned int StatusCode;
 	std::string ErrorMsg;
 	std::string Content;
+	std::map<std::string, std::string> Headers;
+	std::string CurrentHeader;
 };
-

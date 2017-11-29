@@ -7,7 +7,6 @@ MacHTTP is designed to be built with the [Retro68 GCC cross-compiler](https://gi
 See the MacHttpTest application for an example of usage.
 
 ## Building & Installing
-
 MacHTTP requires Retro68 for compilation, and the following libraries:
 
 * [MacTCPHelper](https://github.com/antscode/MacTCPHelper)
@@ -24,3 +23,11 @@ First build and install the above libraries, then execute these commands from th
 This will build and install the library and headers into the m68k-apple-macos toolchain.
 
 The MacHttpTest application will be in the MacHTTP-build directory.
+
+## Credits
+MacHTTP uses code from the following open source projects:
+
+* [autc04/Retro68](https://github.com/autc04/Retro68).
+* [ARMbed/mbedtls](https://github.com/ARMmbed/mbedtls)
+* [nodejs/http_parser](https://github.com/nodejs/http-parser)
+* [jacketizer/libyuarel](https://github.com/jacketizer/libyuarel)

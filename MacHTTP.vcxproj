@@ -100,16 +100,21 @@ make</NMakeReBuildCommandLine>
     <ClInclude Include="HttpClient.h" />
     <ClInclude Include="HttpResponse.h" />
     <ClInclude Include="http_parser.h" />
+    <ClInclude Include="Uri.h" />
+    <ClInclude Include="yuarel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HttpClient.cpp" />
     <ClCompile Include="http_parser.c" />
     <ClCompile Include="MacHttpTest.cpp" />
     <ClCompile Include="HttpResponse.cpp" />
+    <ClCompile Include="Uri.cpp" />
+    <ClCompile Include="yuarel.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="README.md" />
+    <None Include="size.r" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
