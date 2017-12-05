@@ -62,6 +62,12 @@ void HttpClient::Init(std::string baseUri)
 	_baseUri = baseUri;
 	_proxyHost = "";
 	_proxyPort = 0;
+	_debugLevel = 0;
+}
+
+void HttpClient::SetDebugLevel(int debugLevel)
+{
+	_debugLevel = debugLevel;
 }
 
 void HttpClient::Connect(Uri uri, unsigned long stream)
@@ -264,6 +270,8 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 	size_t parsed;
 	HttpResponse response;
 
+	mbedtls_debug_set_threshold(_debugLevel);
+
 	/* Initialize the RNG and the session data */
 	mbedtls_net_init(&server_fd);
 	mbedtls_ssl_init(&ssl);
@@ -313,6 +321,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 	mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_NONE); // BAD BAD BAD! No remote certificate verification (requires root cert)
 	//mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
 	mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+	mbedtls_ssl_conf_dbg(&conf, ssl_debug, stdout);
 
 	if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
 	{
@@ -352,9 +361,8 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 	} */
 
 	/* Write the GET request */
-	len = sprintf((char *)buf, request.c_str());
-
-	while ((ret = mbedtls_ssl_write(&ssl, buf, len)) <= 0)
+	const char* req = request.c_str();
+	while ((ret = mbedtls_ssl_write(&ssl, (const unsigned char*)req, strlen(req))) <= 0)
 	{
 		if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
 		{
@@ -375,6 +383,11 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 		memset(buf, 0, sizeof(buf));
 		ret = mbedtls_ssl_read(&ssl, buf, len);
 		ret = http_parser_execute(&parser, &settings, (const char*)buf, ret);
+
+		if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
+		{
+			break;
+		}
 
 		if (ret < 0)
 		{
@@ -443,4 +456,22 @@ static int on_status_callback(http_parser* parser, const char *at, size_t length
 	HttpResponse* response = (HttpResponse*)parser->data;
 	response->StatusCode = parser->status_code;
 	return 0;
+}
+
+static void ssl_debug(void *ctx, int level,
+	const char *file, int line,
+	const char *str)
+{
+	((void)level);
+
+	FILE *fp;
+	fp = fopen("Mac Volume:log.txt", "a");
+
+	if (fp)
+	{
+		fprintf(fp, "%s:%04d: %s", file, line, str);
+		fflush(fp);
+	}
+
+	fclose(fp);
 }

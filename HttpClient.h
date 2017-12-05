@@ -27,13 +27,15 @@ class HttpClient
 public:
 	HttpClient();
 	HttpClient(std::string baseUri);
-	void SetProxy(std::string host, int port);
 	HttpResponse Get(std::string requestUri);
+	void SetProxy(std::string host, int port);
+	void SetDebugLevel(int debugLevel);
 
 private:
 	std::string _baseUri;
 	std::string _proxyHost;
 	int _proxyPort;
+	int _debugLevel;
 	void Init(std::string baseUri);
 	Uri GetUri(std::string requestUri);
 	std::string GetRemoteHost(Uri uri);
@@ -51,3 +53,4 @@ static int on_header_value_callback(http_parser* parser, const char *at, size_t 
 static int on_body_callback(http_parser* parser, const char *at, size_t length);
 static int on_status_callback(http_parser* parser, const char *at, size_t length);
 static int on_message_complete_callback(http_parser* parser);
+static void ssl_debug(void *ctx, int level, const char *file, int line, const char *str);
