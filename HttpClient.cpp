@@ -56,6 +56,16 @@ HttpResponse HttpClient::Get(std::string requestUri)
 	}
 }
 
+void HttpClient::SetDebugLevel(int debugLevel)
+{
+	_debugLevel = debugLevel;
+}
+
+void HttpClient::SetCipherSuite(int cipherSuite)
+{
+	_overrideCipherSuite = cipherSuite;
+}
+
 /* Private functions */
 void HttpClient::Init(std::string baseUri)
 {
@@ -63,11 +73,7 @@ void HttpClient::Init(std::string baseUri)
 	_proxyHost = "";
 	_proxyPort = 0;
 	_debugLevel = 0;
-}
-
-void HttpClient::SetDebugLevel(int debugLevel)
-{
-	_debugLevel = debugLevel;
+	_overrideCipherSuite = 0;
 }
 
 void HttpClient::Connect(Uri uri, unsigned long stream)
@@ -270,7 +276,9 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 	size_t parsed;
 	HttpResponse response;
 
+#ifdef MBEDTLS_DEBUG
 	mbedtls_debug_set_threshold(_debugLevel);
+#endif
 
 	/* Initialize the RNG and the session data */
 	mbedtls_net_init(&server_fd);
@@ -321,7 +329,26 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 	mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_NONE); // BAD BAD BAD! No remote certificate verification (requires root cert)
 	//mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
 	mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+
+#ifdef MBEDTLS_DEBUG
 	mbedtls_ssl_conf_dbg(&conf, ssl_debug, stdout);
+#endif
+
+	if (_overrideCipherSuite > 0)
+	{
+		int cipherSuites[] =
+		{
+			_overrideCipherSuite,
+			0
+		};
+
+		mbedtls_ssl_conf_ciphersuites(&conf, cipherSuites);
+	}
+	else
+	{
+		// Use default cipher suites
+		mbedtls_ssl_conf_ciphersuites(&conf, _cipherSuites);
+	}
 
 	if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
 	{
@@ -335,7 +362,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 	{
 		response.ErrorMsg = "mbedtls_ssl_set_hostname returned " + std::to_string(ret);
 		return response;
-	}
+	} 
 
 	mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
 
@@ -458,6 +485,7 @@ static int on_status_callback(http_parser* parser, const char *at, size_t length
 	return 0;
 }
 
+#ifdef MBEDTLS_DEBUG
 static void ssl_debug(void *ctx, int level,
 	const char *file, int line,
 	const char *str)
@@ -475,3 +503,4 @@ static void ssl_debug(void *ctx, int level,
 
 	fclose(fp);
 }
+#endif

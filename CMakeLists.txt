@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 2.8)
 # See: https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
 SET(CMAKE_CXX_FLAGS "-Ofast")
 
+# If debugging is enabled in the mbedtls library, then enable debugging here
+# ADD_DEFINITIONS (-DMBEDTLS_DEBUG="ON")
+
 add_library(MacHTTP STATIC
 	HttpClient.h
 	HttpClient.cpp

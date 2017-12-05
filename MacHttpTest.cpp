@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <mbedtls/ssl_ciphersuites.h>
 #include "HttpClient.h"
 
 void DoRequest(std::string title, std::string protocol, std::string path);
@@ -28,6 +29,10 @@ void DoRequest(std::string title, std::string protocol, std::string path)
 	getchar(); getchar();
 
 	HttpClient httpClient(host);
+
+	// Set the lowest cipher suite that the server accepts to maximise performance
+	httpClient.SetCipherSuite(MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA);
+
 	HttpResponse response = httpClient.Get(path);
 
 	printf("%s says:\n\n", absoluteUri.c_str());
