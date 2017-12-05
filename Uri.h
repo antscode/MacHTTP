@@ -11,6 +11,7 @@ public:
 	std::string Scheme;
 	std::string Host;
 	std::string Path;
+	std::string ToString();
 	static bool IsAbsolute(std::string uriStr);
 };
 

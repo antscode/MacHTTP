@@ -3,7 +3,11 @@
 #include <stdexcept>
 #include <algorithm>
 #include "Uri.h"
-#include "yuarel.h"
+
+extern "C"
+{
+	#include "yuarel.h"
+}
 
 Uri::Uri(std::string uriStr)
 {
@@ -34,11 +38,16 @@ Uri::Uri(std::string uriStr)
 			Path += "?" + std::string(url.query);
 		}
 
-		if (Path.length() > 0 && Path.substr(0, 1) != "/")
+		if (Path.length() == 0 || (Path.length() > 0 && Path.substr(0, 1) != "/"))
 		{
 			Path = "/" + Path;
 		}
 	}
+}
+
+std::string Uri::ToString()
+{
+	return Scheme + "://" + Host + Path;
 }
 
 bool Uri::IsAbsolute(std::string uriStr)

@@ -30,6 +30,6 @@ install(TARGETS MacHTTP
     DESTINATION "lib"
 )
 
-install(FILES HttpClient.h HttpResponse.h http_parser.h
+install(FILES HttpClient.h HttpResponse.h Uri.h
     DESTINATION "include/machttp"
 )

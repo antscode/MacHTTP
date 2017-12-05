@@ -1,32 +1,39 @@
 #include <ctype.h>
 #include <string.h>
-#include <mbedtls/net_sockets.h>
-#include <mbedtls/debug.h>
-#include <mbedtls/ssl.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
-#include <mbedtls/error.h>
-#include <mbedtls/certs.h>
-#include "HttpClient.h"
 
 extern "C"
 {
+	#include <mbedtls/net_sockets.h>
+	#include <mbedtls/debug.h>
+	#include <mbedtls/ssl.h>
+	#include <mbedtls/entropy.h>
+	#include <mbedtls/ctr_drbg.h>
+	#include <mbedtls/error.h>
+	#include <mbedtls/certs.h>
 	#include <MacTCP.h>
 	#include <mactcp/CvtAddr.h>
 	#include <mactcp/TCPHi.h>
 }
 
+#include "HttpClient.h"
+
 HttpClient::HttpClient()
 { 
-	_baseUri = "";
+	Init("");
 }
 
 HttpClient::HttpClient(std::string baseUri)
 {
-	_baseUri = baseUri;
+	Init(baseUri);
 }
 
 /* Public functions */
+void HttpClient::SetProxy(std::string host, int port)
+{
+	_proxyHost = host;
+	_proxyPort = port;
+}
+
 HttpResponse HttpClient::Get(std::string requestUri)
 {
 	try
@@ -34,8 +41,9 @@ HttpResponse HttpClient::Get(std::string requestUri)
 		Uri uri = GetUri(requestUri);
 
 		std::string getRequest =
-			"GET " + uri.Path + " HTTP/1.1\r\n" +
+			"GET " + uri.ToString() + " HTTP/1.1\r\n" +
 			"Host: " + uri.Host + "\r\n" +
+			"User-Agent: MacHTTP\r\n" +
 			"Connection: close\r\n\r\n";
 
 		return Request(uri, getRequest);
@@ -49,6 +57,26 @@ HttpResponse HttpClient::Get(std::string requestUri)
 }
 
 /* Private functions */
+void HttpClient::Init(std::string baseUri)
+{
+	_baseUri = baseUri;
+	_proxyHost = "";
+	_proxyPort = 0;
+}
+
+void HttpClient::Connect(Uri uri, unsigned long stream)
+{
+	HttpResponse response;
+
+	std::string request =
+		"CONNECT " + uri.Host + ":443 HTTP/1.1\r\n" +
+		"Host: " + uri.Host + ":443\r\n" +
+		"User-Agent: MacHTTP\r\n" +
+		"Connection: close\r\n\r\n";
+
+	SendData(stream, (Ptr)request.c_str(), (unsigned short)strlen(request.c_str()), false);
+}
+
 Uri HttpClient::GetUri(std::string requestUri)
 {
 	if (!Uri::IsAbsolute(requestUri))
@@ -61,7 +89,7 @@ Uri HttpClient::GetUri(std::string requestUri)
 
 HttpResponse HttpClient::Request(Uri uri, std::string request)
 {
-	if (uri.Scheme == "https")
+	if (uri.Scheme == "https" && _proxyHost == "")
 	{
 		return HttpsRequest(uri, request);
 	}
@@ -105,6 +133,32 @@ HttpResponse HttpClient::CheckRedirect(Uri uri, HttpResponse response)
 	return response;
 }
 
+std::string HttpClient::GetRemoteHost(Uri uri)
+{
+	if (_proxyHost != "")
+	{
+		return _proxyHost;
+	}
+	else
+	{
+		return uri.Host;
+	}
+}
+
+int HttpClient::GetRemotePort(Uri uri)
+{
+	if (_proxyPort > 0)
+	{
+		return _proxyPort;
+	}
+	else if(uri.Scheme == "https")
+	{
+		return 443;
+	}
+
+	return 80;
+}
+
 HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
 {
 	OSErr err;
@@ -127,7 +181,7 @@ HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
 	}
 
 	// Get remote IP
-	err = ConvertStringToAddr((char*)uri.Host.c_str(), &ipAddress);
+	err = ConvertStringToAddr((char*)GetRemoteHost(uri).c_str(), &ipAddress);
 	if (err != noErr)
 	{
 		response.ErrorMsg = "ConvertStringToAddr returned " + std::to_string(err);
@@ -143,8 +197,14 @@ HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
 	}
 
 	// Open a connection
-	err = OpenConnection(stream, ipAddress, 80, 20);
+	err = OpenConnection(stream, ipAddress, GetRemotePort(uri), 20);
 	if (err == noErr) {
+		if (uri.Scheme == "https" && _proxyHost != "")
+		{
+			// First issue CONNECT request to open SSl tunnel via proxy
+			Connect(uri, stream);
+		}
+
 		// Send the request
 		err = SendData(stream, (Ptr)request.c_str(), (unsigned short)strlen(request.c_str()), false);
 		if (err == noErr)
@@ -221,16 +281,20 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 	}
 
 	/* Initialize certificates */
-	ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char *)mbedtls_test_cas_pem,
+	/* ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char *)mbedtls_test_cas_pem,
 		mbedtls_test_cas_pem_len);
 	if (ret < 0)
 	{
 		response.ErrorMsg = "mbedtls_x509_crt_parse returned " + std::to_string(ret);
 		return response;
-	}
+	} */
 
 	/* Start the connection */
-	if ((ret = mbedtls_net_connect(&server_fd, uri.Host.c_str(), "443", MBEDTLS_NET_PROTO_TCP)) != 0)
+	
+	// mbedtls_net_connect modifies the remote host (strips subdomain), so we work off a copy
+	std::string remoteHost = GetRemoteHost(uri).c_str();
+
+	if ((ret = mbedtls_net_connect(&server_fd, remoteHost.c_str(), std::to_string(GetRemotePort(uri)).c_str(), MBEDTLS_NET_PROTO_TCP)) != 0)
 	{
 		response.ErrorMsg = "mbedtls_net_connect returned " + std::to_string(ret);
 		return response;
@@ -256,7 +320,9 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 		return response;
 	}
 
-	if ((ret = mbedtls_ssl_set_hostname(&ssl, uri.Host.c_str())) != 0)
+	// Work off a copy
+	std::string hostname = uri.Host.c_str();
+	if ((ret = mbedtls_ssl_set_hostname(&ssl, hostname.c_str())) != 0)
 	{
 		response.ErrorMsg = "mbedtls_ssl_set_hostname returned " + std::to_string(ret);
 		return response;

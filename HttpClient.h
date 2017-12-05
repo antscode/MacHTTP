@@ -16,7 +16,10 @@
 #endif
 
 #ifndef http_parser_h
-#include "http_parser.h"
+extern "C"
+{
+	#include "http_parser.h"
+}
 #endif
 
 class HttpClient
@@ -24,11 +27,18 @@ class HttpClient
 public:
 	HttpClient();
 	HttpClient(std::string baseUri);
+	void SetProxy(std::string host, int port);
 	HttpResponse Get(std::string requestUri);
 
 private:
 	std::string _baseUri;
+	std::string _proxyHost;
+	int _proxyPort;
+	void Init(std::string baseUri);
 	Uri GetUri(std::string requestUri);
+	std::string GetRemoteHost(Uri uri);
+	int GetRemotePort(Uri uri);
+	void Connect(Uri uri, unsigned long stream);
 	HttpResponse Request(Uri uri, std::string request);
 	HttpResponse HttpRequest(Uri uri, std::string request);
 	HttpResponse HttpsRequest(Uri uri, std::string request);
