@@ -56,6 +56,30 @@ HttpResponse HttpClient::Get(std::string requestUri)
 	}
 }
 
+HttpResponse HttpClient::Post(std::string requestUri, std::string content)
+{
+	try
+	{
+		Uri uri = GetUri(requestUri);
+
+		std::string postRequest =
+			"POST " + uri.ToString() + " HTTP/1.1\r\n" +
+			"Host: " + uri.Host + "\r\n" +
+			"User-Agent: MacHTTP\r\n" +
+			"Content-Length: " + std::to_string(content.length()) + "\r\n" +
+			"Connection: close\r\n\r\n" +
+			content;
+
+		return Request(uri, postRequest);
+	}
+	catch (const std::invalid_argument& e)
+	{
+		HttpResponse response;
+		response.ErrorMsg = e.what();
+		return response;
+	}
+}
+
 void HttpClient::SetDebugLevel(int debugLevel)
 {
 	_debugLevel = debugLevel;

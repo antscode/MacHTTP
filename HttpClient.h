@@ -30,6 +30,7 @@ public:
 	HttpClient();
 	HttpClient(std::string baseUri);
 	HttpResponse Get(std::string requestUri);
+	HttpResponse Post(std::string requestUri, std::string content);
 	void SetProxy(std::string host, int port);
 	void SetCipherSuite(int cipherSuite);
 	void SetDebugLevel(int debugLevel);
