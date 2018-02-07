@@ -67,10 +67,10 @@
 cd $(ProjectDir)$(Configuration)
 cmake .. -DCMAKE_TOOLCHAIN_FILE=~/Retro68-build/toolchain/m68k-apple-macos/cmake/retro68.toolchain.cmake
 make 
-xcopy *.APPL "C:\Users\Anthony\OneDrive\Documents\Personal\Mac\Apps\BasiliskII\Virtual Desktop\" /y /s</NMakeBuildCommandLine>
+xcopy *.APPL "C:\Users\AnthonySuper\OneDrive\Documents\Personal\Mac\Apps\BasiliskII\Virtual Desktop\" /y /s</NMakeBuildCommandLine>
     <NMakeOutput>$(ProjectName).exe</NMakeOutput>
     <NMakePreprocessorDefinitions>WIN32_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <IncludePath>C:\cygwin64\home\Anthony\Retro68-build\toolchain\CIncludes;C:\cygwin64\home\Anthony\Retro68-build\toolchain\m68k-apple-macos\include</IncludePath>
+    <IncludePath>C:\cygwin64\home\AnthonySuper\Retro68-build\toolchain\CIncludes;C:\cygwin64\home\AnthonySuper\Retro68-build\toolchain\m68k-apple-macos\include</IncludePath>
     <SourcePath>$(VC_SourcePath);</SourcePath>
     <NMakeReBuildCommandLine>cd $(ProjectDir)$(Configuration)
 cmake .. -DCMAKE_TOOLCHAIN_FILE=~/Retro68-build/toolchain/m68k-apple-macos/cmake/retro68.toolchain.cmake

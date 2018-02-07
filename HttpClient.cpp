@@ -43,8 +43,7 @@ HttpResponse HttpClient::Get(std::string requestUri)
 		std::string getRequest =
 			"GET " + uri.ToString() + " HTTP/1.1\r\n" +
 			"Host: " + uri.Host + "\r\n" +
-			"User-Agent: MacHTTP\r\n" +
-			"Connection: close\r\n\r\n";
+			"User-Agent: MacHTTP\r\n\r\n";
 
 		return Request(uri, getRequest);
 	}
@@ -67,7 +66,7 @@ HttpResponse HttpClient::Post(std::string requestUri, std::string content)
 			"Host: " + uri.Host + "\r\n" +
 			"User-Agent: MacHTTP\r\n" +
 			"Content-Length: " + std::to_string(content.length()) + "\r\n" +
-			"Connection: close\r\n\r\n" +
+			"Content-Type: application/x-www-form-urlencoded\r\n\r\n" +
 			content;
 
 		return Request(uri, postRequest);
@@ -107,8 +106,7 @@ void HttpClient::Connect(Uri uri, unsigned long stream)
 	std::string request =
 		"CONNECT " + uri.Host + ":443 HTTP/1.1\r\n" +
 		"Host: " + uri.Host + ":443\r\n" +
-		"User-Agent: MacHTTP\r\n" +
-		"Connection: close\r\n\r\n";
+		"User-Agent: MacHTTP\r\n\r\n";
 
 	SendData(stream, (Ptr)request.c_str(), (unsigned short)strlen(request.c_str()), false);
 }
