@@ -210,6 +210,7 @@ HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
 	err = InitNetwork();
 	if (err != noErr)
 	{
+		response.ErrorCode = ConnectionError;
 		response.ErrorMsg = "InitNetwork returned " + std::to_string(err);
 		return response;
 	}
@@ -218,6 +219,7 @@ HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
 	err = ConvertStringToAddr((char*)GetRemoteHost(uri).c_str(), &ipAddress);
 	if (err != noErr)
 	{
+		response.ErrorCode = ConnectionError;
 		response.ErrorMsg = "ConvertStringToAddr returned " + std::to_string(err);
 		return response;
 	}
@@ -226,12 +228,13 @@ HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
 	err = CreateStream(&stream, 16384);
 	if (err != noErr)
 	{
+		response.ErrorCode = ConnectionError;
 		response.ErrorMsg = "CreateStream returned " + std::to_string(err);
 		return response;
 	}
 
 	// Open a connection
-	err = OpenConnection(stream, ipAddress, GetRemotePort(uri), 20);
+	err = OpenConnection(stream, ipAddress, GetRemotePort(uri), 0);
 	if (err == noErr) {
 		if (uri.Scheme == "https" && _proxyHost != "")
 		{
@@ -255,6 +258,7 @@ HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
 
 				if (ret < 0)
 				{
+					response.ErrorCode = ConnectionError;
 					response.ErrorMsg = "http_parser_execute returned " + std::to_string(ret);
 					return response;
 				}
@@ -262,6 +266,7 @@ HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
 		}
 		else
 		{
+			response.ErrorCode = ConnectionError;
 			response.ErrorMsg = "SendData returned " + std::to_string(err);
 			return response;
 		}
@@ -270,6 +275,7 @@ HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
 	}
 	else
 	{
+		response.ErrorCode = ConnectionError;
 		response.ErrorMsg = "OpenConnection returned " + std::to_string(err);
 		return response;
 	}
@@ -314,6 +320,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 		(const unsigned char *)pers,
 		strlen(pers))) != 0)
 	{
+		response.ErrorCode = SSLError;
 		response.ErrorMsg = "mbedtls_ctr_drbg_seed returned " + std::to_string(ret);
 		return response;
 	}
@@ -334,6 +341,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 
 	if ((ret = mbedtls_net_connect(&server_fd, remoteHost.c_str(), std::to_string(GetRemotePort(uri)).c_str(), MBEDTLS_NET_PROTO_TCP)) != 0)
 	{
+		response.ErrorCode = ConnectionError;
 		response.ErrorMsg = "mbedtls_net_connect returned " + std::to_string(ret);
 		return response;
 	}
@@ -344,6 +352,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 		MBEDTLS_SSL_TRANSPORT_STREAM,
 		MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
 	{
+		response.ErrorCode = SSLError;
 		response.ErrorMsg = "mbedtls_ssl_config_defaults returned " + std::to_string(ret);
 		return response;
 	}
@@ -374,6 +383,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 
 	if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
 	{
+		response.ErrorCode = SSLError;
 		response.ErrorMsg = "mbedtls_ssl_setup returned " + std::to_string(ret);
 		return response;
 	}
@@ -382,6 +392,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 	std::string hostname = uri.Host.c_str();
 	if ((ret = mbedtls_ssl_set_hostname(&ssl, hostname.c_str())) != 0)
 	{
+		response.ErrorCode = SSLError;
 		response.ErrorMsg = "mbedtls_ssl_set_hostname returned " + std::to_string(ret);
 		return response;
 	} 
@@ -393,6 +404,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 	{
 		if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
 		{
+			response.ErrorCode = SSLError;
 			response.ErrorMsg = "mbedtls_ssl_handshake returned " + std::to_string(ret);
 			return response;
 		}
@@ -415,6 +427,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 	{
 		if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
 		{
+			response.ErrorCode = ConnectionError;
 			response.ErrorMsg = "mbedtls_ssl_write returned " + std::to_string(ret);
 			return response;
 		}
@@ -440,6 +453,7 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 
 		if (ret < 0)
 		{
+			response.ErrorCode = ConnectionError;
 			response.ErrorMsg = "http_parser_execute returned " + std::to_string(ret);
 			return response;
 		}
