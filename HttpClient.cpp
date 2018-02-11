@@ -1,20 +1,5 @@
 #include <ctype.h>
 #include <string.h>
-
-extern "C"
-{
-	#include <mbedtls/net_sockets.h>
-	#include <mbedtls/debug.h>
-	#include <mbedtls/ssl.h>
-	#include <mbedtls/entropy.h>
-	#include <mbedtls/ctr_drbg.h>
-	#include <mbedtls/error.h>
-	#include <mbedtls/certs.h>
-	#include <MacTCP.h>
-	#include <mactcp/CvtAddr.h>
-	#include <mactcp/TCPHi.h>
-}
-
 #include "HttpClient.h"
 
 HttpClient::HttpClient()
@@ -34,7 +19,7 @@ void HttpClient::SetProxy(std::string host, int port)
 	_proxyPort = port;
 }
 
-HttpResponse HttpClient::Get(std::string requestUri)
+void HttpClient::Get(std::string requestUri, std::function<void(HttpResponse)> onComplete)
 {
 	try
 	{
@@ -45,17 +30,17 @@ HttpResponse HttpClient::Get(std::string requestUri)
 			"Host: " + uri.Host + "\r\n" +
 			"User-Agent: MacHTTP\r\n\r\n";
 
-		return Request(uri, getRequest);
+		Request(uri, getRequest, onComplete);
 	}
 	catch (const std::invalid_argument& e)
 	{
 		HttpResponse response;
 		response.ErrorMsg = e.what();
-		return response;
+		onComplete(response);
 	}
 }
 
-HttpResponse HttpClient::Post(std::string requestUri, std::string content)
+void HttpClient::Post(std::string requestUri, std::string content, std::function<void(HttpResponse)> onComplete)
 {
 	try
 	{
@@ -69,13 +54,13 @@ HttpResponse HttpClient::Post(std::string requestUri, std::string content)
 			"Content-Type: application/x-www-form-urlencoded\r\n\r\n" +
 			content;
 
-		return Request(uri, postRequest);
+		Request(uri, postRequest, onComplete);
 	}
 	catch (const std::invalid_argument& e)
 	{
 		HttpResponse response;
 		response.ErrorMsg = e.what();
-		return response;
+		onComplete(response);
 	}
 }
 
@@ -97,6 +82,8 @@ void HttpClient::Init(std::string baseUri)
 	_proxyPort = 0;
 	_debugLevel = 0;
 	_overrideCipherSuite = 0;
+	_status = Idle;
+	InitParser();
 }
 
 void HttpClient::Connect(Uri uri, unsigned long stream)
@@ -121,50 +108,122 @@ Uri HttpClient::GetUri(std::string requestUri)
 	return Uri(requestUri);
 }
 
-HttpResponse HttpClient::Request(Uri uri, std::string request)
+void HttpClient::CancelRequest()
 {
-	if (uri.Scheme == "https" && _proxyHost == "")
+	_cancel = true;
+}
+
+void HttpClient::Request(Uri uri, std::string request, std::function<void(HttpResponse)> onComplete)
+{
+	_uri = uri;
+	_request = request;
+	_onComplete = onComplete;
+	_status = Waiting;
+	_cRequest = NULL;
+	_cancel = false;
+	_response.Reset();
+}
+
+void HttpClient::ProcessRequests()
+{
+	if (_status == Idle)
 	{
-		return HttpsRequest(uri, request);
+		return;
 	}
-	else
+
+	if (_uri.Scheme == "http")
 	{
-		return HttpRequest(uri, request);
+		if (_cancel)
+		{
+			NetClose();
+			return;
+		}
+
+		switch (_status)
+		{
+			case Waiting:
+				_status = Connect();
+				break;
+
+			case SendRequest:
+				_status = Request();
+				break;
+
+			case ReadResponse:
+				_status = Response();
+				break;
+
+			case Close:
+				NetClose();
+				break;
+		}
+	}
+	else if(_uri.Scheme == "https")
+	{
+		if (_cancel)
+		{
+			SslClose();
+			return;
+		}
+
+		switch (_status)
+		{
+			case Waiting:
+				_status = SslConnect();
+				break;
+
+			case Handshake:
+				_status = SslHandshake();
+				break;
+
+			case SendRequest:
+				_status = SslRequest();
+				break;
+
+			case ReadResponse:
+				_status = SslResponse();
+				break;
+
+			case Close:
+				SslClose();
+				break;
+		}
 	}
 }
 
-void HttpClient::InitParser(HttpResponse* response, http_parser* parser, http_parser_settings* settings)
+void HttpClient::InitParser()
 {
 	// Set parser data
-	parser->data = (void*)response;
+	_parser.data = (void*)&_response;
 
 	// Parser settings
-	memset(settings, 0, sizeof(*settings));
-	settings->on_status = on_status_callback;
-	settings->on_header_field = on_header_field_callback;
-	settings->on_header_value = on_header_value_callback;
-	settings->on_message_complete = on_message_complete_callback;
-	settings->on_body = on_body_callback;
+	memset(&_settings, 0, sizeof(_settings));
+	_settings.on_status = on_status_callback;
+	_settings.on_header_field = on_header_field_callback;
+	_settings.on_header_value = on_header_value_callback;
+	_settings.on_message_complete = on_message_complete_callback;
+	_settings.on_body = on_body_callback;
 
-	http_parser_init(parser, HTTP_RESPONSE);
+	http_parser_init(&_parser, HTTP_RESPONSE);
 }
 
-HttpResponse HttpClient::CheckRedirect(Uri uri, HttpResponse response)
+bool HttpClient::DoRedirect()
 {
-	if (response.StatusCode == 302 && response.Headers.count("Location") > 0)
+	if (_response.Success && _response.StatusCode == 302 && _response.Headers.count("Location") > 0)
 	{
-		std::string location = response.Headers["Location"];
+		std::string location = _response.Headers["Location"];
 
 		if (!Uri::IsAbsolute(location))
 		{
-			location = uri.Scheme + "://" + uri.Host + location;
+			location = _uri.Scheme + "://" + _uri.Host + location;
 		}
 
 		// Perform 302 redirect
-		return Get(location);
+		Get(location, _onComplete);
+		return true;
 	}
 
-	return response;
+	return false;
 }
 
 std::string HttpClient::GetRemoteHost(Uri uri)
@@ -193,176 +252,182 @@ int HttpClient::GetRemotePort(Uri uri)
 	return 80;
 }
 
-HttpResponse HttpClient::HttpRequest(Uri uri, std::string request)
+HttpClient::RequestStatus HttpClient::Connect()
 {
 	OSErr err;
 	unsigned long ipAddress;
-	unsigned long stream;
-	struct http_parser parser;
-	http_parser_settings settings;
-	size_t parsed;
-	unsigned char buf[8192];
-	unsigned short dataLength;
-	int ret;
-	HttpResponse response;
 
 	// Open the network driver
 	err = InitNetwork();
 	if (err != noErr)
 	{
-		response.ErrorCode = ConnectionError;
-		response.ErrorMsg = "InitNetwork returned " + std::to_string(err);
-		return response;
+		_response.ErrorCode = ConnectionError;
+		_response.ErrorMsg = "InitNetwork returned " + std::to_string(err);
+		return Close;
 	}
 
 	// Get remote IP
-	err = ConvertStringToAddr((char*)GetRemoteHost(uri).c_str(), &ipAddress);
+	err = ConvertStringToAddr((char*)GetRemoteHost(_uri).c_str(), &ipAddress);
 	if (err != noErr)
 	{
-		response.ErrorCode = ConnectionError;
-		response.ErrorMsg = "ConvertStringToAddr returned " + std::to_string(err);
-		return response;
+		_response.ErrorCode = ConnectionError;
+		_response.ErrorMsg = "ConvertStringToAddr returned " + std::to_string(err);
+		return Close;
 	}
 
 	// Open a TCP stream
-	err = CreateStream(&stream, 16384);
+	err = CreateStream(&_stream, 4096);
 	if (err != noErr)
 	{
-		response.ErrorCode = ConnectionError;
-		response.ErrorMsg = "CreateStream returned " + std::to_string(err);
-		return response;
+		_response.ErrorCode = ConnectionError;
+		_response.ErrorMsg = "CreateStream returned " + std::to_string(err);
+		return Close;
 	}
 
 	// Open a connection
-	err = OpenConnection(stream, ipAddress, GetRemotePort(uri), 0);
+	err = OpenConnection(_stream, ipAddress, GetRemotePort(_uri), 0);
 	if (err == noErr) {
-		if (uri.Scheme == "https" && _proxyHost != "")
+		if (_uri.Scheme == "https" && _proxyHost != "")
 		{
 			// First issue CONNECT request to open SSl tunnel via proxy
-			Connect(uri, stream);
+			Connect(_uri, _stream);
 		}
-
-		// Send the request
-		err = SendData(stream, (Ptr)request.c_str(), (unsigned short)strlen(request.c_str()), false);
-		if (err == noErr)
-		{
-			// Init http parser
-			InitParser(&response, &parser, &settings);
-
-			// Read the response
-			do
-			{
-				dataLength = sizeof(buf) - 1;
-				err = RecvData(stream, (Ptr)&buf, &dataLength, false);
-				ret = http_parser_execute(&parser, &settings, (const char*)&buf, dataLength);
-
-				if (ret < 0)
-				{
-					response.ErrorCode = ConnectionError;
-					response.ErrorMsg = "http_parser_execute returned " + std::to_string(ret);
-					return response;
-				}
-			} while (!response.MessageComplete);
-		}
-		else
-		{
-			response.ErrorCode = ConnectionError;
-			response.ErrorMsg = "SendData returned " + std::to_string(err);
-			return response;
-		}
-
-		CloseConnection(stream);
 	}
 	else
 	{
-		response.ErrorCode = ConnectionError;
-		response.ErrorMsg = "OpenConnection returned " + std::to_string(err);
-		return response;
+		_response.ErrorCode = ConnectionError;
+		_response.ErrorMsg = "OpenConnection returned " + std::to_string(err);
+		return Close;
 	}
 
-	ReleaseStream(stream);
-
-	response.Success = true;
-
-	return CheckRedirect(uri, response);
+	// Connect success, move to next status
+	return SendRequest;
 }
 
-HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
+HttpClient::RequestStatus HttpClient::Request()
 {
-	int ret, len;
-	mbedtls_net_context server_fd;
-	uint32_t flags;
-	unsigned char buf[8192];
+	// Send the request
+	OSErr err = SendData(_stream, (Ptr)_request.c_str(), (unsigned short)strlen(_request.c_str()), false);
+
+	if (err != noErr)
+	{
+		_response.ErrorCode = ConnectionError;
+		_response.ErrorMsg = "SendData returned " + std::to_string(err);
+		return Close;
+	}
+
+	// Request complete, move to next status
+	return ReadResponse;
+}
+
+HttpClient::RequestStatus HttpClient::Response()
+{
+	unsigned char buf[4096];
+	unsigned short dataLength;
+	int ret;
+
+	dataLength = sizeof(buf) - 1;
+	OSErr err = RecvData(_stream, (Ptr)&buf, &dataLength, false);
+	ret = http_parser_execute(&_parser, &_settings, (const char*)&buf, dataLength);
+
+	if (_response.MessageComplete)
+	{
+		// Read response complete, move to next status
+		_response.Success = true;
+		return Close;
+	}
+
+	if (ret < 0)
+	{
+		_response.ErrorCode = ConnectionError;
+		_response.ErrorMsg = "http_parser_execute returned " + std::to_string(ret);
+		return Close;
+	}
+
+	// Read response still in progress
+	return ReadResponse;
+}
+
+HttpClient::RequestStatus HttpClient::NetClose()
+{
+	CloseConnection(_stream);
+	ReleaseStream(_stream);
+
+	if (!DoRedirect())
+	{
+		_status = Idle;
+
+		if (!_cancel)
+		{
+			_onComplete(_response);
+		}
+	}
+}
+
+HttpClient::RequestStatus HttpClient::SslConnect()
+{
 	const char *pers = "HttpClient";
-	mbedtls_entropy_context entropy;
-	mbedtls_ctr_drbg_context ctr_drbg;
-	mbedtls_ssl_context ssl;
-	mbedtls_ssl_config conf;
-	mbedtls_x509_crt cacert;
-	struct http_parser parser;
-	http_parser_settings settings;
-	size_t parsed;
-	HttpResponse response;
+	int ret;
 
 #ifdef MBEDTLS_DEBUG
 	mbedtls_debug_set_threshold(_debugLevel);
 #endif
 
 	/* Initialize the RNG and the session data */
-	mbedtls_net_init(&server_fd);
-	mbedtls_ssl_init(&ssl);
-	mbedtls_ssl_config_init(&conf);
-	mbedtls_x509_crt_init(&cacert);
-	mbedtls_ctr_drbg_init(&ctr_drbg);
-	mbedtls_entropy_init(&entropy);
+	mbedtls_net_init(&_server_fd);
+	mbedtls_ssl_init(&_ssl);
+	mbedtls_ssl_config_init(&_conf);
+	mbedtls_x509_crt_init(&_cacert);
+	mbedtls_ctr_drbg_init(&_ctr_drbg);
+	mbedtls_entropy_init(&_entropy);
 
-	if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+	if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg, mbedtls_entropy_func, &_entropy,
 		(const unsigned char *)pers,
 		strlen(pers))) != 0)
 	{
-		response.ErrorCode = SSLError;
-		response.ErrorMsg = "mbedtls_ctr_drbg_seed returned " + std::to_string(ret);
-		return response;
+		_response.ErrorCode = SSLError;
+		_response.ErrorMsg = "mbedtls_ctr_drbg_seed returned " + std::to_string(ret);
+		return Close;
 	}
 
 	/* Initialize certificates */
 	/* ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char *)mbedtls_test_cas_pem,
-		mbedtls_test_cas_pem_len);
+	mbedtls_test_cas_pem_len);
 	if (ret < 0)
 	{
-		response.ErrorMsg = "mbedtls_x509_crt_parse returned " + std::to_string(ret);
-		return response;
+	response.ErrorMsg = "mbedtls_x509_crt_parse returned " + std::to_string(ret);
+	return response;
 	} */
 
 	/* Start the connection */
-	
-	// mbedtls_net_connect modifies the remote host (strips subdomain), so we work off a copy
-	std::string remoteHost = GetRemoteHost(uri).c_str();
 
-	if ((ret = mbedtls_net_connect(&server_fd, remoteHost.c_str(), std::to_string(GetRemotePort(uri)).c_str(), MBEDTLS_NET_PROTO_TCP)) != 0)
+	// mbedtls_net_connect modifies the remote host (strips subdomain), so we work off a copy
+	std::string remoteHost = GetRemoteHost(_uri).c_str();
+
+	if ((ret = mbedtls_net_connect(&_server_fd, remoteHost.c_str(), std::to_string(GetRemotePort(_uri)).c_str(), MBEDTLS_NET_PROTO_TCP)) != 0)
 	{
-		response.ErrorCode = ConnectionError;
-		response.ErrorMsg = "mbedtls_net_connect returned " + std::to_string(ret);
-		return response;
+		_response.ErrorCode = ConnectionError;
+		_response.ErrorMsg = "mbedtls_net_connect returned " + std::to_string(ret);
+		return Close;
 	}
 
 	/* Setup stuff */
-	if ((ret = mbedtls_ssl_config_defaults(&conf,
+	if ((ret = mbedtls_ssl_config_defaults(&_conf,
 		MBEDTLS_SSL_IS_CLIENT,
 		MBEDTLS_SSL_TRANSPORT_STREAM,
 		MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
 	{
-		response.ErrorCode = SSLError;
-		response.ErrorMsg = "mbedtls_ssl_config_defaults returned " + std::to_string(ret);
-		return response;
+		_response.ErrorCode = SSLError;
+		_response.ErrorMsg = "mbedtls_ssl_config_defaults returned " + std::to_string(ret);
+		return Close;
 	}
 
-	mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_NONE); // BAD BAD BAD! No remote certificate verification (requires root cert)
-	//mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
-	mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+	mbedtls_ssl_conf_authmode(&_conf, MBEDTLS_SSL_VERIFY_NONE); // BAD BAD BAD! No remote certificate verification (requires root cert)
+															   //mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
+	mbedtls_ssl_conf_rng(&_conf, mbedtls_ctr_drbg_random, &_ctr_drbg);
 
 #ifdef MBEDTLS_DEBUG
-	mbedtls_ssl_conf_dbg(&conf, ssl_debug, stdout);
+	mbedtls_ssl_conf_dbg(&_conf, ssl_debug, stdout);
 #endif
 
 	if (_overrideCipherSuite > 0)
@@ -373,104 +438,146 @@ HttpResponse HttpClient::HttpsRequest(Uri uri, std::string request)
 			0
 		};
 
-		mbedtls_ssl_conf_ciphersuites(&conf, cipherSuites);
+		mbedtls_ssl_conf_ciphersuites(&_conf, cipherSuites);
 	}
 	else
 	{
 		// Use default cipher suites
-		mbedtls_ssl_conf_ciphersuites(&conf, _cipherSuites);
+		mbedtls_ssl_conf_ciphersuites(&_conf, _cipherSuites);
 	}
 
-	if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
+	if ((ret = mbedtls_ssl_setup(&_ssl, &_conf)) != 0)
 	{
-		response.ErrorCode = SSLError;
-		response.ErrorMsg = "mbedtls_ssl_setup returned " + std::to_string(ret);
-		return response;
+		_response.ErrorCode = SSLError;
+		_response.ErrorMsg = "mbedtls_ssl_setup returned " + std::to_string(ret);
+		return Close;
 	}
 
 	// Work off a copy
-	std::string hostname = uri.Host.c_str();
-	if ((ret = mbedtls_ssl_set_hostname(&ssl, hostname.c_str())) != 0)
+	std::string hostname = _uri.Host.c_str();
+	if ((ret = mbedtls_ssl_set_hostname(&_ssl, hostname.c_str())) != 0)
 	{
-		response.ErrorCode = SSLError;
-		response.ErrorMsg = "mbedtls_ssl_set_hostname returned " + std::to_string(ret);
-		return response;
-	} 
-
-	mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
-
-	/* Handshake */
-	while ((ret = mbedtls_ssl_handshake(&ssl)) != 0)
-	{
-		if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
-		{
-			response.ErrorCode = SSLError;
-			response.ErrorMsg = "mbedtls_ssl_handshake returned " + std::to_string(ret);
-			return response;
-		}
+		_response.ErrorCode = SSLError;
+		_response.ErrorMsg = "mbedtls_ssl_set_hostname returned " + std::to_string(ret);
+		return Close;
 	}
 
+	mbedtls_ssl_set_bio(&_ssl, &_server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+
+	// Connect success, move to next status
+	return Handshake;
+}
+
+HttpClient::RequestStatus HttpClient::SslHandshake()
+{
+	int ret = mbedtls_ssl_handshake_step(&_ssl);
+
+	if (ret == 0)
+	{
+		// Handshake complete, move to next status
+		return SendRequest;
+	}
+	else if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
+	{
+		// Something went wrong
+		_response.ErrorCode = SSLError;
+		_response.ErrorMsg = "mbedtls_ssl_handshake returned " + std::to_string(ret);
+		return Close;
+	}
+
+	// Handshake still in progress
+	return Handshake;
+}
+
+HttpClient::RequestStatus HttpClient::SslVerifyCert()
+{
 	/* Verify the server certificate */
+	//	uint32_t flags;
 	/* if( ( flags = mbedtls_ssl_get_verify_result( &ssl ) ) != 0 )
 	{
-	    char vrfy_buf[512];
-	    // mbedtls_printf( " failed\n" );
+	char vrfy_buf[512];
+	// mbedtls_printf( " failed\n" );
 
-	    mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
-	    // mbedtls_printf( "%s\n", vrfy_buf );
-		return -1;
+	mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
+	// mbedtls_printf( "%s\n", vrfy_buf );
+	return -1;
 	} */
+	return SendRequest;
+}
 
-	/* Write the GET request */
-	const char* req = request.c_str();
-	while ((ret = mbedtls_ssl_write(&ssl, (const unsigned char*)req, strlen(req))) <= 0)
+HttpClient::RequestStatus HttpClient::SslRequest()
+{
+	if (_cRequest == NULL)
 	{
-		if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
-		{
-			response.ErrorCode = ConnectionError;
-			response.ErrorMsg = "mbedtls_ssl_write returned " + std::to_string(ret);
-			return response;
-		}
+		_cRequest = _request.c_str();
 	}
 
-	len = ret;
-	
-	// Init http parser
-	InitParser(&response, &parser, &settings);
+	int ret = mbedtls_ssl_write(&_ssl, (const unsigned char*)_cRequest, strlen(_cRequest));
 
-	/* Read the HTTP response */
-	do
+	if (ret > 0)
 	{
-		len = sizeof(buf) - 1;
-		memset(buf, 0, sizeof(buf));
-		ret = mbedtls_ssl_read(&ssl, buf, len);
-		ret = http_parser_execute(&parser, &settings, (const char*)buf, ret);
+		// Request complete, move to next status
+		return ReadResponse;
+	}
 
-		if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
-		{
-			break;
-		}
+	if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
+	{
+		_response.ErrorCode = ConnectionError;
+		_response.ErrorMsg = "mbedtls_ssl_write returned " + std::to_string(ret);
+		return Close;
+	}
 
-		if (ret < 0)
+	// Request still in progress
+	return SendRequest;
+}
+
+HttpClient::RequestStatus HttpClient::SslResponse()
+{
+	unsigned char buf[4096];
+	int len = sizeof(buf) - 1;
+	memset(buf, 0, sizeof(buf));
+
+	int ret = mbedtls_ssl_read(&_ssl, buf, len);
+	ret = http_parser_execute(&_parser, &_settings, (const char*)buf, ret);
+
+	if (_response.MessageComplete ||
+		ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
+	{
+		// Read response complete, move to next status
+		_response.Success = true;
+		return Close;
+	}
+
+	if (ret < 0)
+	{
+		_response.ErrorCode = ConnectionError;
+		_response.ErrorMsg = "http_parser_execute returned " + std::to_string(ret);
+		return Close;
+	}
+
+	// Read response still in progress
+	return ReadResponse;
+}
+
+HttpClient::RequestStatus HttpClient::SslClose()
+{
+	mbedtls_ssl_close_notify(&_ssl);
+	mbedtls_net_free(&_server_fd);
+	mbedtls_x509_crt_free(&_cacert);
+	mbedtls_ssl_free(&_ssl);
+	mbedtls_ssl_config_free(&_conf);
+	mbedtls_ctr_drbg_free(&_ctr_drbg);
+	mbedtls_entropy_free(&_entropy);
+
+	if (!DoRedirect())
+	{
+		_status = Idle;
+
+		if (!_cancel)
 		{
-			response.ErrorCode = ConnectionError;
-			response.ErrorMsg = "http_parser_execute returned " + std::to_string(ret);
-			return response;
+			_onComplete(_response);
 		}
 	}
-	while(!response.MessageComplete);
-
-	mbedtls_ssl_close_notify(&ssl);
-	mbedtls_net_free(&server_fd);
-	mbedtls_x509_crt_free(&cacert);
-	mbedtls_ssl_free(&ssl);
-	mbedtls_ssl_config_free(&conf);
-	mbedtls_ctr_drbg_free(&ctr_drbg);
-	mbedtls_entropy_free(&entropy);
-
-	response.Success = true;
-
-	return CheckRedirect(uri, response);
 }
 
 static int on_body_callback(http_parser* parser, const char *at, size_t length) 

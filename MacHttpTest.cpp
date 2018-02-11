@@ -3,16 +3,39 @@
 #include <mbedtls/ssl_ciphersuites.h>
 #include "HttpClient.h"
 
+#define arraylen(arr) ((int) (sizeof (arr) / sizeof (arr)[0]))
+
+std::string _requests[6][3] = 
+{
+	{ "Small http request", "http", "/status/418" },
+	{ "Big http request", "http", "/html" },
+	{ "302 redirect", "http", "/redirect-to?url=/status/418" },
+	{ "Small https request", "https", "/status/418" },
+	{ "Big https request", "https", "/html" },
+	{ "302 redirect (https)", "https", "/redirect-to?url=/status/418" }
+};
+
+bool _doRequest = true;
+int _curRequest = 0;
+HttpClient _httpClient;
+
 void DoRequest(std::string title, std::string protocol, std::string path);
+void OnResponse(HttpResponse response);
 
 int main()
 {
-	DoRequest("1 of 6: Small http request", "http", "/status/418");
-	DoRequest("2 of 6: Big http request", "http", "/html");
-	DoRequest("3 of 6: 302 redirect", "http", "/redirect-to?url=/status/418");
-	DoRequest("4 of 6: Small https request", "https", "/status/418");
-	DoRequest("5 of 6: Big https request", "https", "/html");
-	DoRequest("6 of 6: 302 redirect (https)", "https", "/redirect-to?url=/status/418");
+	// Set the lowest cipher suite that the server accepts to maximise performance
+	//_httpClient.SetCipherSuite(MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA);
+
+	while (_curRequest < arraylen(_requests))
+	{
+		if (_doRequest)
+		{
+			DoRequest(_requests[_curRequest][0], _requests[_curRequest][1], _requests[_curRequest][2]);
+		}
+
+		_httpClient.ProcessRequests();
+	}
 
 	printf("All done!\n");
 	getchar(); getchar();
@@ -28,15 +51,14 @@ void DoRequest(std::string title, std::string protocol, std::string path)
 	fflush(stdout);
 	getchar(); getchar();
 
-	HttpClient httpClient(host);
-
-	// Set the lowest cipher suite that the server accepts to maximise performance
-	httpClient.SetCipherSuite(MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA);
-
-	HttpResponse response = httpClient.Get(path);
-
 	printf("%s says:\n\n", absoluteUri.c_str());
 
+	_httpClient.Get(absoluteUri, OnResponse);
+	_doRequest = false;
+}
+
+void OnResponse(HttpResponse response)
+{
 	printf("Status: %d\n\n", response.StatusCode);
 
 	if (response.Success)
@@ -56,4 +78,7 @@ void DoRequest(std::string title, std::string protocol, std::string path)
 	{
 		printf("ERROR: %s\n\n", response.ErrorMsg.c_str());
 	}
+
+	_curRequest++;
+	_doRequest = true;
 }

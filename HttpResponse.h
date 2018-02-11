@@ -16,6 +16,7 @@ class HttpResponse
 {
 public:
 	HttpResponse();
+	void Reset();
 	bool Success;
 	bool MessageComplete;
 	unsigned int StatusCode;

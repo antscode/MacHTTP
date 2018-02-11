@@ -2,6 +2,11 @@
 
 HttpResponse::HttpResponse()
 {
+	Reset();
+}
+
+void HttpResponse::Reset()
+{
 	Success = false;
 	ErrorMsg = "";
 	Content = "";

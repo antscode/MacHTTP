@@ -22,6 +22,21 @@ extern "C"
 }
 #endif
 
+extern "C"
+{
+	#include <mbedtls/net_sockets.h>
+	#include <mbedtls/debug.h>
+	#include <mbedtls/ssl.h>
+	#include <mbedtls/entropy.h>
+	#include <mbedtls/ctr_drbg.h>
+	#include <mbedtls/error.h>
+	#include <mbedtls/certs.h>
+	#include <MacTCP.h>
+	#include <mactcp/CvtAddr.h>
+	#include <mactcp/TCPHi.h>
+}
+
+#include <functional>
 #include <mbedtls/ssl_ciphersuites.h>
 
 class HttpClient
@@ -29,27 +44,70 @@ class HttpClient
 public:
 	HttpClient();
 	HttpClient(std::string baseUri);
-	HttpResponse Get(std::string requestUri);
-	HttpResponse Post(std::string requestUri, std::string content);
+	void Get(std::string requestUri, std::function<void(HttpResponse)> onComplete);
+	void Post(std::string requestUri, std::string content, std::function<void(HttpResponse)> onComplete);
 	void SetProxy(std::string host, int port);
 	void SetCipherSuite(int cipherSuite);
 	void SetDebugLevel(int debugLevel);
+	void ProcessRequests();
+	void CancelRequest();
 
 private:
+	enum RequestStatus
+	{
+		Idle,
+		Waiting,
+		Handshake,
+		SendRequest,
+		ReadResponse,
+		Close
+	};
+
 	std::string _baseUri;
 	std::string _proxyHost;
+	Uri _uri;
+	std::string _request;
+	RequestStatus _status;
+	HttpResponse _response;
+	std::function<void(HttpResponse)> _onComplete;
 	int _proxyPort;
 	int _debugLevel;
+	bool _cancel;
+
 	void Init(std::string baseUri);
 	Uri GetUri(std::string requestUri);
 	std::string GetRemoteHost(Uri uri);
 	int GetRemotePort(Uri uri);
 	void Connect(Uri uri, unsigned long stream);
-	HttpResponse Request(Uri uri, std::string request);
-	HttpResponse HttpRequest(Uri uri, std::string request);
-	HttpResponse HttpsRequest(Uri uri, std::string request);
-	HttpResponse CheckRedirect(Uri uri, HttpResponse response);
-	void InitParser(HttpResponse* response, http_parser* parser, http_parser_settings* settings);
+	void Request(Uri uri, std::string request, std::function<void(HttpResponse)> onComplete);
+	bool DoRedirect();
+	void InitParser();
+
+	http_parser _parser;
+	http_parser_settings _settings;
+
+	unsigned long _stream;
+
+	RequestStatus Connect();
+	RequestStatus Request();
+	RequestStatus Response();
+	RequestStatus NetClose();
+
+	mbedtls_net_context _server_fd;
+	mbedtls_ssl_context _ssl;
+	mbedtls_ssl_config _conf;
+	mbedtls_x509_crt _cacert;
+	mbedtls_entropy_context _entropy;
+	mbedtls_ctr_drbg_context _ctr_drbg;
+	const char* _cRequest;
+
+	RequestStatus SslConnect();
+	RequestStatus SslHandshake();
+	RequestStatus SslVerifyCert();
+	RequestStatus SslRequest();
+	RequestStatus SslResponse();
+	RequestStatus SslClose();
+
 	int _overrideCipherSuite;
 	int _cipherSuites[14] =
 	{

@@ -9,6 +9,9 @@ extern "C"
 	#include "yuarel.h"
 }
 
+Uri::Uri()
+{ }
+
 Uri::Uri(std::string uriStr)
 {
 	struct yuarel url;

@@ -7,6 +7,7 @@
 class Uri
 {
 public:
+	Uri();
 	Uri(std::string uriStr);
 	std::string Scheme;
 	std::string Host;
