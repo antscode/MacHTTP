@@ -5,33 +5,33 @@
 
 #define arraylen(arr) ((int) (sizeof (arr) / sizeof (arr)[0]))
 
-std::string _requests[6][3] = 
+std::string _requests[6][2] = 
 {
-	{ "Small http request", "http", "/status/418" },
-	{ "Big http request", "http", "/html" },
-	{ "302 redirect", "http", "/redirect-to?url=/status/418" },
-	{ "Small https request", "https", "/status/418" },
-	{ "Big https request", "https", "/html" },
-	{ "302 redirect (https)", "https", "/redirect-to?url=/status/418" }
+	{ "Small http request", "http://httpbin.org/status/418" },
+	{ "Big http request", "http://httpbin.org/html" },
+	{ "302 redirect", "http://httpbin.org/redirect-to?url=/status/418" },
+	{ "Small https request", "https://httpbin.org/status/418" },
+	{ "Big https request", "https://httpbin.org/html" },
+	{ "302 redirect (https)", "https://httpbin.org/redirect-to?url=/status/418" }
 };
 
 bool _doRequest = true;
 int _curRequest = 0;
 HttpClient _httpClient;
 
-void DoRequest(std::string title, std::string protocol, std::string path);
+void DoRequest(std::string title, std::string url);
 void OnResponse(HttpResponse response);
 
 int main()
 {
 	// Set the lowest cipher suite that the server accepts to maximise performance
-	//_httpClient.SetCipherSuite(MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA);
+	_httpClient.SetCipherSuite(MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA);
 
 	while (_curRequest < arraylen(_requests))
 	{
 		if (_doRequest)
 		{
-			DoRequest(_requests[_curRequest][0], _requests[_curRequest][1], _requests[_curRequest][2]);
+			DoRequest(_requests[_curRequest][0], _requests[_curRequest][1]);
 		}
 
 		_httpClient.ProcessRequests();
@@ -42,18 +42,15 @@ int main()
 	return 0;
 }
 
-void DoRequest(std::string title, std::string protocol, std::string path)
+void DoRequest(std::string title, std::string url)
 {
-	std::string host = protocol + "://httpbin.org";
-	std::string absoluteUri = host + path;
-
 	printf("%s (press return)...\n", title.c_str());
 	fflush(stdout);
 	getchar(); getchar();
 
-	printf("%s says:\n\n", absoluteUri.c_str());
+	printf("%s says:\n\n", url.c_str());
 
-	_httpClient.Get(absoluteUri, OnResponse);
+	_httpClient.Get(url, OnResponse);
 	_doRequest = false;
 }
 

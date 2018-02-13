@@ -2,6 +2,13 @@
 #include <string.h>
 #include "HttpClient.h"
 
+extern "C"
+{
+	#include <MacTCP.h>
+	#include <mactcp/CvtAddr.h>
+	#include <mactcp/TCPHi.h>
+}
+
 HttpClient::HttpClient()
 { 
 	Init("");
@@ -71,7 +78,7 @@ void HttpClient::SetDebugLevel(int debugLevel)
 
 void HttpClient::SetCipherSuite(int cipherSuite)
 {
-	_overrideCipherSuite = cipherSuite;
+	_overrideCipherSuite[0] = cipherSuite;
 }
 
 /* Private functions */
@@ -81,7 +88,7 @@ void HttpClient::Init(std::string baseUri)
 	_proxyHost = "";
 	_proxyPort = 0;
 	_debugLevel = 0;
-	_overrideCipherSuite = 0;
+	_overrideCipherSuite[0] = 0;
 	_status = Idle;
 	InitParser();
 }
@@ -110,7 +117,10 @@ Uri HttpClient::GetUri(std::string requestUri)
 
 void HttpClient::CancelRequest()
 {
-	_cancel = true;
+	if (_status != Idle)
+	{
+		_cancel = true;
+	}
 }
 
 void HttpClient::Request(Uri uri, std::string request, std::function<void(HttpResponse)> onComplete)
@@ -118,10 +128,11 @@ void HttpClient::Request(Uri uri, std::string request, std::function<void(HttpRe
 	_uri = uri;
 	_request = request;
 	_onComplete = onComplete;
-	_status = Waiting;
 	_cRequest = NULL;
 	_cancel = false;
 	_response.Reset();
+	http_parser_init(&_parser, HTTP_RESPONSE);
+	_status = Waiting;
 }
 
 void HttpClient::ProcessRequests()
@@ -203,8 +214,6 @@ void HttpClient::InitParser()
 	_settings.on_header_value = on_header_value_callback;
 	_settings.on_message_complete = on_message_complete_callback;
 	_settings.on_body = on_body_callback;
-
-	http_parser_init(&_parser, HTTP_RESPONSE);
 }
 
 bool HttpClient::DoRedirect()
@@ -361,6 +370,10 @@ HttpClient::RequestStatus HttpClient::NetClose()
 		{
 			_onComplete(_response);
 		}
+		else
+		{
+			_cancel = false;
+		}
 	}
 }
 
@@ -430,15 +443,9 @@ HttpClient::RequestStatus HttpClient::SslConnect()
 	mbedtls_ssl_conf_dbg(&_conf, ssl_debug, stdout);
 #endif
 
-	if (_overrideCipherSuite > 0)
+	if (_overrideCipherSuite[0] > 0)
 	{
-		int cipherSuites[] =
-		{
-			_overrideCipherSuite,
-			0
-		};
-
-		mbedtls_ssl_conf_ciphersuites(&_conf, cipherSuites);
+		mbedtls_ssl_conf_ciphersuites(&_conf, _overrideCipherSuite);
 	}
 	else
 	{
@@ -576,6 +583,10 @@ HttpClient::RequestStatus HttpClient::SslClose()
 		if (!_cancel)
 		{
 			_onComplete(_response);
+		}
+		else
+		{
+			_cancel = false;
 		}
 	}
 }

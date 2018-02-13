@@ -31,9 +31,6 @@ extern "C"
 	#include <mbedtls/ctr_drbg.h>
 	#include <mbedtls/error.h>
 	#include <mbedtls/certs.h>
-	#include <MacTCP.h>
-	#include <mactcp/CvtAddr.h>
-	#include <mactcp/TCPHi.h>
 }
 
 #include <functional>
@@ -108,7 +105,7 @@ private:
 	RequestStatus SslResponse();
 	RequestStatus SslClose();
 
-	int _overrideCipherSuite;
+	int _overrideCipherSuite[2] = { 0, 0 };
 	int _cipherSuites[14] =
 	{
 		MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA,
