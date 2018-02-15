@@ -8,6 +8,7 @@
 enum HttpResponseErrorCode
 {
 	ConnectionError,
+	ConnectionTimeout,
 	SSLError
 };
 

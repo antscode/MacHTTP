@@ -477,7 +477,7 @@ HttpClient::RequestStatus HttpClient::SslConnect()
 
 HttpClient::RequestStatus HttpClient::SslHandshake()
 {
-	int ret = mbedtls_ssl_handshake_step(&_ssl);
+	int ret = mbedtls_ssl_handshake(&_ssl);
 
 	if (ret == 0)
 	{
@@ -486,8 +486,17 @@ HttpClient::RequestStatus HttpClient::SslHandshake()
 	}
 	else if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
 	{
-		// Something went wrong
-		_response.ErrorCode = SSLError;
+		if (ret == MBEDTLS_ERR_NET_RECV_FAILED)
+		{
+			// Most likely a timeout
+			_response.ErrorCode = ConnectionTimeout;
+		}
+		else
+		{
+			// Something else went wrong
+			_response.ErrorCode = SSLError;
+		}
+
 		_response.ErrorMsg = "mbedtls_ssl_handshake returned " + std::to_string(ret);
 		return Close;
 	}
