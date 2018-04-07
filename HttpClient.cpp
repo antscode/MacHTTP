@@ -33,7 +33,7 @@ void HttpClient::Get(std::string requestUri, std::function<void(HttpResponse)> o
 		Uri uri = GetUri(requestUri);
 
 		std::string getRequest =
-			"GET " + uri.ToString() + " HTTP/1.1\r\n" +
+			"GET " + uri.Path + " HTTP/1.1\r\n" +
 			"Host: " + uri.Host + "\r\n" +
 			"User-Agent: MacHTTP\r\n\r\n";
 
@@ -54,7 +54,7 @@ void HttpClient::Post(std::string requestUri, std::string content, std::function
 		Uri uri = GetUri(requestUri);
 
 		std::string postRequest =
-			"POST " + uri.ToString() + " HTTP/1.1\r\n" +
+			"POST " + uri.Path + " HTTP/1.1\r\n" +
 			"Host: " + uri.Host + "\r\n" +
 			"User-Agent: MacHTTP\r\n" +
 			"Content-Length: " + std::to_string(content.length()) + "\r\n" +

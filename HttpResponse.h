@@ -1,6 +1,5 @@
 #ifndef __HTTP_RESPONSE__
 #define __HTTP_RESPONSE__
-#endif
 
 #include <string>
 #include <map>
@@ -27,3 +26,5 @@ public:
 	std::map<std::string, std::string> Headers;
 	std::string CurrentHeader;
 };
+
+#endif

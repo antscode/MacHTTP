@@ -1,15 +1,8 @@
 #ifndef __HTTP_CLIENT__
 #define __HTTP_CLIENT__
-#endif
 
-#ifndef __HTTP_RESPONSE_
 #include "HttpResponse.h"
-#endif
-
-#ifndef __URI_
 #include "Uri.h"
-#endif
-
 // Disabled strict HTTP parsing to improve performance
 #ifndef HTTP_PARSER_STRICT
 #define HTTP_PARSER_STRICT 0
@@ -133,4 +126,6 @@ static int on_message_complete_callback(http_parser* parser);
 
 #ifdef MBEDTLS_DEBUG
 static void ssl_debug(void *ctx, int level, const char *file, int line, const char *str);
+#endif
+
 #endif

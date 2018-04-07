@@ -1,6 +1,5 @@
 #ifndef __URI__
 #define __URI__
-#endif
 
 #include <string>
 
@@ -16,3 +15,4 @@ public:
 	static bool IsAbsolute(std::string uriStr);
 };
 
+#endif
