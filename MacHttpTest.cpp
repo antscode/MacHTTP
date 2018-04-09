@@ -24,8 +24,10 @@ void OnResponse(HttpResponse response);
 
 int main()
 {
+	#ifdef HTTPS_ENABLED
 	// Set the lowest cipher suite that the server accepts to maximise performance
 	_httpClient.SetCipherSuite(MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA);
+	#endif
 
 	while (_curRequest < arraylen(_requests))
 	{

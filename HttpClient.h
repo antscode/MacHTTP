@@ -3,6 +3,8 @@
 
 #include "HttpResponse.h"
 #include "Uri.h"
+#include <functional>
+
 // Disabled strict HTTP parsing to improve performance
 #ifndef HTTP_PARSER_STRICT
 #define HTTP_PARSER_STRICT 0
@@ -15,6 +17,7 @@ extern "C"
 }
 #endif
 
+#ifdef HTTPS_ENABLED
 extern "C"
 {
 	#include <mbedtls/net_sockets.h>
@@ -24,10 +27,9 @@ extern "C"
 	#include <mbedtls/ctr_drbg.h>
 	#include <mbedtls/error.h>
 	#include <mbedtls/certs.h>
+	#include <mbedtls/ssl_ciphersuites.h>
 }
-
-#include <functional>
-#include <mbedtls/ssl_ciphersuites.h>
+#endif
 
 class HttpClient
 {
@@ -83,14 +85,16 @@ private:
 	RequestStatus Response();
 	RequestStatus NetClose();
 
+	const char* _cRequest;
+
+	#ifdef HTTPS_ENABLED
 	mbedtls_net_context _server_fd;
 	mbedtls_ssl_context _ssl;
 	mbedtls_ssl_config _conf;
 	mbedtls_x509_crt _cacert;
 	mbedtls_entropy_context _entropy;
 	mbedtls_ctr_drbg_context _ctr_drbg;
-	const char* _cRequest;
-
+	
 	RequestStatus SslConnect();
 	RequestStatus SslHandshake();
 	RequestStatus SslVerifyCert();
@@ -116,6 +120,7 @@ private:
 		MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
 		0
 	};
+	#endif // HTTPS_ENABLED
 };
 
 static int on_header_field_callback(http_parser* parser, const char *at, size_t length);

@@ -76,11 +76,6 @@ void HttpClient::SetDebugLevel(int debugLevel)
 	_debugLevel = debugLevel;
 }
 
-void HttpClient::SetCipherSuite(int cipherSuite)
-{
-	_overrideCipherSuite[0] = cipherSuite;
-}
-
 /* Private functions */
 void HttpClient::Init(std::string baseUri)
 {
@@ -88,9 +83,12 @@ void HttpClient::Init(std::string baseUri)
 	_proxyHost = "";
 	_proxyPort = 0;
 	_debugLevel = 0;
-	_overrideCipherSuite[0] = 0;
 	_status = Idle;
 	InitParser();
+	
+	#ifdef HTTPS_ENABLED
+	_overrideCipherSuite[0] = 0;
+	#endif
 }
 
 void HttpClient::Connect(Uri uri, unsigned long stream)
@@ -169,6 +167,7 @@ void HttpClient::ProcessRequests()
 				break;
 		}
 	}
+	#ifdef HTTPS_ENABLED
 	else if(_uri.Scheme == "https")
 	{
 		if (_cancel)
@@ -200,6 +199,7 @@ void HttpClient::ProcessRequests()
 				break;
 		}
 	}
+	#endif // HTTPS_ENABLED
 }
 
 void HttpClient::InitParser()
@@ -375,6 +375,12 @@ HttpClient::RequestStatus HttpClient::NetClose()
 			_cancel = false;
 		}
 	}
+}
+
+#ifdef HTTPS_ENABLED
+void HttpClient::SetCipherSuite(int cipherSuite)
+{
+	_overrideCipherSuite[0] = cipherSuite;
 }
 
 HttpClient::RequestStatus HttpClient::SslConnect()
@@ -599,6 +605,7 @@ HttpClient::RequestStatus HttpClient::SslClose()
 		}
 	}
 }
+#endif // HTTPS_ENABLED
 
 static int on_body_callback(http_parser* parser, const char *at, size_t length) 
 {
@@ -666,4 +673,4 @@ static void ssl_debug(void *ctx, int level,
 
 	fclose(fp);
 }
-#endif
+#endif // MBEDTLS_DEBUG
