@@ -34,17 +34,6 @@ extern "C"
 class HttpClient
 {
 public:
-	HttpClient();
-	HttpClient(std::string baseUri);
-	void Get(std::string requestUri, std::function<void(HttpResponse)> onComplete);
-	void Post(std::string requestUri, std::string content, std::function<void(HttpResponse)> onComplete);
-	void SetProxy(std::string host, int port);
-	void SetCipherSuite(int cipherSuite);
-	void SetDebugLevel(int debugLevel);
-	void ProcessRequests();
-	void CancelRequest();
-
-private:
 	enum RequestStatus
 	{
 		Idle,
@@ -55,6 +44,18 @@ private:
 		Close
 	};
 
+	HttpClient();
+	HttpClient(std::string baseUri);
+	void Get(std::string requestUri, std::function<void(HttpResponse)> onComplete);
+	void Post(std::string requestUri, std::string content, std::function<void(HttpResponse)> onComplete);
+	void SetProxy(std::string host, int port);
+	void SetCipherSuite(int cipherSuite);
+	void SetDebugLevel(int debugLevel);
+	void ProcessRequests();
+	void CancelRequest();
+	RequestStatus GetStatus();
+
+private:
 	std::string _baseUri;
 	std::string _proxyHost;
 	Uri _uri;

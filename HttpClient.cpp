@@ -202,6 +202,11 @@ void HttpClient::ProcessRequests()
 	#endif // HTTPS_ENABLED
 }
 
+HttpClient::RequestStatus HttpClient::GetStatus()
+{
+	return _status;
+}
+
 void HttpClient::InitParser()
 {
 	// Set parser data
