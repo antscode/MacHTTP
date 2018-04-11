@@ -344,7 +344,7 @@ HttpClient::RequestStatus HttpClient::Response()
 	OSErr err = RecvData(_stream, (Ptr)&buf, &dataLength, false);
 	ret = http_parser_execute(&_parser, &_settings, (const char*)&buf, dataLength);
 
-	if (_response.MessageComplete)
+	if (_response.MessageComplete || err == connectionClosing)
 	{
 		// Read response complete, move to next status
 		_response.Success = true;
