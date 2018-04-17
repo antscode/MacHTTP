@@ -38,12 +38,9 @@ public:
 	{
 		Idle,
 		Waiting,
-		Handshake,
-		SendRequest,
-		ReadResponse,
-		Close
+		Running
 	};
-
+	
 	HttpClient();
 	HttpClient(std::string baseUri);
 	void Get(std::string requestUri, std::function<void(HttpResponse)> onComplete);
@@ -54,6 +51,7 @@ public:
 	void ProcessRequests();
 	void CancelRequest();
 	RequestStatus GetStatus();
+	void InitThread();
 
 private:
 	std::string _baseUri;
@@ -75,16 +73,18 @@ private:
 	void Request(Uri uri, std::string request, std::function<void(HttpResponse)> onComplete);
 	bool DoRedirect();
 	void InitParser();
+	static void Yield();
+	void HttpRequest();
 
 	http_parser _parser;
 	http_parser_settings _settings;
 
 	unsigned long _stream;
-
-	RequestStatus Connect();
-	RequestStatus Request();
-	RequestStatus Response();
-	RequestStatus NetClose();
+	
+	bool Connect();
+	bool Request();
+	bool Response();
+	void NetClose();
 
 	const char* _cRequest;
 
@@ -96,12 +96,13 @@ private:
 	mbedtls_entropy_context _entropy;
 	mbedtls_ctr_drbg_context _ctr_drbg;
 	
-	RequestStatus SslConnect();
-	RequestStatus SslHandshake();
-	RequestStatus SslVerifyCert();
-	RequestStatus SslRequest();
-	RequestStatus SslResponse();
-	RequestStatus SslClose();
+	void HttpsRequest();
+	bool SslConnect();
+	bool SslHandshake();
+	bool SslVerifyCert();
+	bool SslRequest();
+	bool SslResponse();
+	void SslClose();
 
 	int _overrideCipherSuite[2] = { 0, 0 };
 	int _cipherSuites[14] =

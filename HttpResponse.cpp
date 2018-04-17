@@ -12,4 +12,6 @@ void HttpResponse::Reset()
 	Content = "";
 	StatusCode = -1;
 	MessageComplete = false;
+	Headers.clear();
+	CurrentHeader = "";
 }
