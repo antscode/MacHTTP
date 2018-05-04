@@ -251,7 +251,7 @@ bool HttpClient::DoRedirect()
 	return false;
 }
 
-std::string HttpClient::GetRemoteHost(Uri uri)
+std::string HttpClient::GetRemoteHost(Uri &uri)
 {
 	if (_proxyHost != "")
 	{
@@ -263,7 +263,7 @@ std::string HttpClient::GetRemoteHost(Uri uri)
 	}
 }
 
-int HttpClient::GetRemotePort(Uri uri)
+int HttpClient::GetRemotePort(Uri &uri)
 {
 	if (_proxyPort > 0)
 	{
@@ -292,11 +292,12 @@ bool HttpClient::Connect()
 	}
 
 	// Get remote IP
-	err = ConvertStringToAddr((char*)GetRemoteHost(_uri).c_str(), &ipAddress, (GiveTimePtr)Yield);
+	char* hostname = (char*)GetRemoteHost(_uri).c_str();
+	err = ConvertStringToAddr(hostname, &ipAddress, (GiveTimePtr)Yield);
 	if (err != noErr)
 	{
 		_response.ErrorCode = ConnectionError;
-		_response.ErrorMsg = "ConvertStringToAddr returned " + std::to_string(err);
+		_response.ErrorMsg = "ConvertStringToAddr returned " + std::to_string(err) + " for hostname " + std::string(hostname);
 		return false;
 	}
 
@@ -359,7 +360,7 @@ bool HttpClient::Response()
 
 	while (true)
 	{
-		dataLength = sizeof(buf);
+		dataLength = sizeof(buf) - 1;
 		memset(buf, 0, sizeof(buf));
 
 		OSErr err = RecvData(
@@ -592,7 +593,7 @@ bool HttpClient::SslResponse()
 
 	while (true)
 	{
-		len = sizeof(buf);
+		len = sizeof(buf) - 1;
 		memset(buf, 0, sizeof(buf));
 
 		int ret = mbedtls_ssl_read(&_ssl, buf, len);

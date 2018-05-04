@@ -67,8 +67,8 @@ private:
 
 	void Init(std::string baseUri);
 	Uri GetUri(std::string requestUri);
-	std::string GetRemoteHost(Uri uri);
-	int GetRemotePort(Uri uri);
+	std::string GetRemoteHost(Uri &uri);
+	int GetRemotePort(Uri &uri);
 	void Connect(Uri uri, unsigned long stream);
 	void Request(Uri uri, std::string request, std::function<void(HttpResponse)> onComplete);
 	bool DoRedirect();
