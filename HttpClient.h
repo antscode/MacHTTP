@@ -5,6 +5,8 @@
 #include "Uri.h"
 #include <functional>
 
+using namespace std;
+
 // Disabled strict HTTP parsing to improve performance
 #ifndef HTTP_PARSER_STRICT
 #define HTTP_PARSER_STRICT 0
@@ -17,7 +19,7 @@ extern "C"
 }
 #endif
 
-#ifdef HTTPS_ENABLED
+#ifdef SSL_ENABLED
 extern "C"
 {
 	#include <mbedtls/net_sockets.h>
@@ -42,35 +44,40 @@ public:
 	};
 	
 	HttpClient();
-	HttpClient(std::string baseUri);
-	void Get(std::string requestUri, std::function<void(HttpResponse)> onComplete);
-	void Post(std::string requestUri, std::string content, std::function<void(HttpResponse)> onComplete);
-	void SetProxy(std::string host, int port);
+	HttpClient(string baseUri);
+	void Get(string requestUri, std::function<void(HttpResponse)> onComplete);
+	void Post(string requestUri, string content, std::function<void(HttpResponse)> onComplete);
+	void Get(Uri requestUri, std::function<void(HttpResponse)> onComplete);
+	void Post(Uri requestUri, string content, std::function<void(HttpResponse)> onComplete);
+	void SetProxy(string host, int port);
 	void SetCipherSuite(int cipherSuite);
 	void SetDebugLevel(int debugLevel);
+	void SetStunnel(string host, int port);
 	void ProcessRequests();
 	void CancelRequest();
 	RequestStatus GetStatus();
 	void InitThread();
 
 private:
-	std::string _baseUri;
-	std::string _proxyHost;
+	string _baseUri;
+	string _proxyHost;
+	string _stunnelHost;
 	Uri _uri;
-	std::string _request;
+	string _request;
 	RequestStatus _status;
 	HttpResponse _response;
 	std::function<void(HttpResponse)> _onComplete;
 	int _proxyPort;
+	int _stunnelPort;
 	int _debugLevel;
 	bool _cancel;
 
-	void Init(std::string baseUri);
-	Uri GetUri(std::string requestUri);
-	std::string GetRemoteHost(Uri &uri);
+	void Init(string baseUri);
+	Uri GetUri(string requestUri);
+	string GetRemoteHost(Uri &uri);
 	int GetRemotePort(Uri &uri);
 	void Connect(Uri uri, unsigned long stream);
-	void Request(Uri uri, std::string request, std::function<void(HttpResponse)> onComplete);
+	void Request(Uri uri, string request, std::function<void(HttpResponse)> onComplete);
 	bool DoRedirect();
 	void InitParser();
 	static void Yield();
@@ -88,7 +95,7 @@ private:
 
 	const char* _cRequest;
 
-	#ifdef HTTPS_ENABLED
+	#ifdef SSL_ENABLED
 	mbedtls_net_context _server_fd;
 	mbedtls_ssl_context _ssl;
 	mbedtls_ssl_config _conf;
@@ -122,7 +129,7 @@ private:
 		MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
 		0
 	};
-	#endif // HTTPS_ENABLED
+	#endif // SSL_ENABLED
 };
 
 static int on_header_field_callback(http_parser* parser, const char *at, size_t length);

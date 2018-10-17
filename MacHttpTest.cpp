@@ -3,9 +3,11 @@
 #include <mbedtls/ssl_ciphersuites.h>
 #include "HttpClient.h"
 
+using namespace std;
+
 #define arraylen(arr) ((int) (sizeof (arr) / sizeof (arr)[0]))
 
-std::string _requests[6][2] = 
+string _requests[6][2] = 
 {
 	{ "Small http request", "http://httpbin.org/status/418" },
 	{ "Big http request", "http://httpbin.org/html" },
@@ -24,7 +26,7 @@ void OnResponse(HttpResponse response);
 
 int main()
 {
-	#ifdef HTTPS_ENABLED
+	#ifdef SSL_ENABLED
 	// Set the lowest cipher suite that the server accepts to maximise performance
 	_httpClient.SetCipherSuite(MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA);
 	#endif

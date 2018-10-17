@@ -4,6 +4,8 @@
 #include <string>
 #include <map>
 
+using namespace std;
+
 enum HttpResponseErrorCode
 {
 	ConnectionError,
@@ -21,10 +23,10 @@ public:
 	bool MessageComplete;
 	unsigned int StatusCode;
 	HttpResponseErrorCode ErrorCode;
-	std::string ErrorMsg;
-	std::string Content;
-	std::map<std::string, std::string> Headers;
-	std::string CurrentHeader;
+	string ErrorMsg;
+	string Content;
+	map<string, string> Headers;
+	string CurrentHeader;
 };
 
 #endif

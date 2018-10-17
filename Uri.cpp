@@ -12,7 +12,7 @@ extern "C"
 Uri::Uri()
 { }
 
-Uri::Uri(std::string uriStr)
+Uri::Uri(string uriStr)
 {
 	struct yuarel url;
 
@@ -23,22 +23,22 @@ Uri::Uri(std::string uriStr)
 	memset(&url, 0, sizeof(struct yuarel));
 	if (yuarel_parse(&url, (char*)uriStr.c_str()) == -1)
 	{
-		throw std::invalid_argument("Invalid uri");
+		throw invalid_argument("Invalid uri");
 	}
 
 	if (url.scheme != NULL)
-		Scheme = std::string(url.scheme);
+		Scheme = string(url.scheme);
 
 	if (url.host != NULL)
-		Host = std::string(url.host);
+		Host = string(url.host);
 
 	if (url.path != NULL)
 	{
-		Path = std::string(url.path);
+		Path = string(url.path);
 
 		if (url.query != NULL)
 		{
-			Path += "?" + std::string(url.query);
+			Path += "?" + string(url.query);
 		}
 
 		if (Path.length() == 0 || (Path.length() > 0 && Path.substr(0, 1) != "/"))
@@ -48,15 +48,15 @@ Uri::Uri(std::string uriStr)
 	}
 }
 
-std::string Uri::ToString()
+string Uri::ToString()
 {
 	return Scheme + "://" + Host + Path;
 }
 
-bool Uri::IsAbsolute(std::string uriStr)
+bool Uri::IsAbsolute(string uriStr)
 {
 	// To lowercase for comparison
-	std::transform(uriStr.begin(), uriStr.end(), uriStr.begin(), ::tolower);
+	transform(uriStr.begin(), uriStr.end(), uriStr.begin(), ::tolower);
 
 	return uriStr.find("http") == 0;
 }

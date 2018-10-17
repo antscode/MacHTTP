@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 # See: https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
 SET(CMAKE_CXX_FLAGS "-Ofast")
 
-# Set HTTPS_ENABLED to OFF if you don't require https communication
-SET(HTTPS_ENABLED ON)
+# Set SSL_ENABLED to OFF if you don't require https communication
+SET(SSL_ENABLED OFF)
 
 # If debugging is enabled in the mbedtls library, then enable debugging here
 # ADD_DEFINITIONS (-DMBEDTLS_DEBUG="ON")
@@ -22,8 +22,8 @@ add_library(MacHTTP STATIC
 	yuarel.h
 )
 
-IF(${HTTPS_ENABLED})
-	ADD_DEFINITIONS (-DHTTPS_ENABLED)
+IF(${SSL_ENABLED})
+	ADD_DEFINITIONS (-DSSL_ENABLED)
 	target_link_libraries(MacHTTP mbedtls mbedx509 mbedcrypto MacTCPHelper)
 ELSE()
 	target_link_libraries(MacHTTP MacTCPHelper)
