@@ -30,7 +30,7 @@ ELSE()
 ENDIF()
 
 add_application(MacHTTPTest
-	MacHTTPTest.cpp
+	MacHttpTest.cpp
 	size.r
 	CONSOLE
 )
