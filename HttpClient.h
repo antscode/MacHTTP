@@ -59,6 +59,7 @@ public:
 	void InitThread();
 
 private:
+	static const int BUF_SIZE = 8192;
 	string _baseUri;
 	string _proxyHost;
 	string _stunnelHost;

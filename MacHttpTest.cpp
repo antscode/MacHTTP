@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <vector>
 #include <mbedtls/ssl_ciphersuites.h>
 #include "HttpClient.h"
 
@@ -7,14 +8,12 @@ using namespace std;
 
 #define arraylen(arr) ((int) (sizeof (arr) / sizeof (arr)[0]))
 
-string _requests[6][2] = 
+string _requests[4][3] = 
 {
-	{ "Small http request", "http://httpbin.org/status/418" },
-	{ "Big http request", "http://httpbin.org/html" },
-	{ "302 redirect", "http://httpbin.org/redirect-to?url=/status/418" },
-	{ "Small https request", "https://httpbin.org/status/418" },
-	{ "Big https request", "https://httpbin.org/html" },
-	{ "302 redirect (https)", "https://httpbin.org/redirect-to?url=/status/418" }
+	{ "Small http request", "http://httpbin.org/status/418", "false" },
+	{ "Big http request", "http://httpbin.org/html", "false" },
+	{ "302 redirect", "http://httpbin.org/redirect-to?url=/status/418", "false" },
+	{ "Image", "http://www.pvsm.ru/images/2018/09/30/umelec-sozdal-WiFi-modul-dlya-Macintosh-SE-30-modeli-1989-goda-2.jpg", "true" }
 };
 
 bool _doRequest = true;
@@ -46,6 +45,20 @@ int main()
 	return 0;
 }
 
+void WriteImage(string msg)
+{
+	FILE *fp;
+	fp = fopen("Mac HD (68K):mac.jpg", "wb");
+
+	if (fp)
+	{
+		vector<char> v(msg.begin(), msg.end());
+		char* ca = &v[0];
+		fwrite(ca, 1, msg.size(), fp);
+		fclose(fp);
+	}
+}
+
 void DoRequest(std::string title, std::string url)
 {
 	printf("%s (press return)...\n", title.c_str());
@@ -71,9 +84,17 @@ void OnResponse(HttpResponse response)
 			printf("%s: %s\n", it->first.c_str(), it->second.c_str());
 		}
 
-		printf("\n\nContent:\n\n");
+		if (_requests[_curRequest][2] == "true")
+		{
+			printf("\n\n(Image downloaded)\n\n");
+			WriteImage(response.Content);
+		}
+		else
+		{
+			printf("\n\nContent:\n\n");
 
-		printf("%s\n\n", response.Content.c_str());
+			printf("%s\n\n", response.Content.c_str());
+		}
 	}
 	else
 	{

@@ -321,7 +321,7 @@ bool HttpClient::Connect()
 	}
 
 	// Open a TCP stream
-	err = CreateStream(&_stream, 4096, (GiveTimePtr)Yield, &_cancel);
+	err = CreateStream(&_stream, BUF_SIZE, (GiveTimePtr)Yield, &_cancel);
 	if (err != noErr)
 	{
 		_response.ErrorCode = ConnectionError;
@@ -373,7 +373,7 @@ bool HttpClient::Request()
 
 bool HttpClient::Response()
 {
-	unsigned char buf[4096];
+	unsigned char buf[BUF_SIZE];
 	unsigned short dataLength;
 	int ret;
 
@@ -664,7 +664,7 @@ void HttpClient::SslClose()
 static int on_body_callback(http_parser* parser, const char *at, size_t length) 
 {
 	HttpResponse* response = (HttpResponse*)parser->data;
-	response->Content += string(at);
+	response->Content.append(at, length);
 	return 0;
 }
 
