@@ -53,6 +53,7 @@ public:
 	void SetCipherSuite(int cipherSuite);
 	void SetDebugLevel(int debugLevel);
 	void SetStunnel(string host, int port);
+	void SetAuthorization(string authorization);
 	void ProcessRequests();
 	void CancelRequest();
 	RequestStatus GetStatus();
@@ -63,6 +64,7 @@ private:
 	string _baseUri;
 	string _proxyHost;
 	string _stunnelHost;
+	string _authorization;
 	Uri _uri;
 	string _request;
 	RequestStatus _status;
@@ -83,6 +85,7 @@ private:
 	void InitParser();
 	static void Yield();
 	void HttpRequest();
+	string GetAuthHeader();
 
 	http_parser _parser;
 	http_parser_settings _settings;

@@ -51,6 +51,7 @@ void HttpClient::Get(Uri requestUri, function<void(HttpResponse)> onComplete)
 	string getRequest =
 		"GET " + requestUri.Path + " HTTP/1.1\r\n" +
 		"Host: " + requestUri.Host + "\r\n" +
+		GetAuthHeader() +
 		"User-Agent: MacHTTP\r\n\r\n";
 
 	Request(requestUri, getRequest, onComplete);
@@ -77,6 +78,7 @@ void HttpClient::Post(Uri requestUri, string content, function<void(HttpResponse
 	string postRequest =
 		"POST " + requestUri.Path + " HTTP/1.1\r\n" +
 		"Host: " + requestUri.Host + "\r\n" +
+		GetAuthHeader() +
 		"User-Agent: MacHTTP\r\n" +
 		"Content-Length: " + to_string(content.length()) + "\r\n" +
 		"Content-Type: application/x-www-form-urlencoded\r\n\r\n" +
@@ -96,6 +98,11 @@ void HttpClient::SetStunnel(string host, int port)
 	_stunnelPort = port;
 }
 
+void HttpClient::SetAuthorization(string authorization)
+{
+	_authorization = authorization;
+}
+
 /* Private functions */
 void HttpClient::Init(string baseUri)
 {
@@ -104,6 +111,7 @@ void HttpClient::Init(string baseUri)
 	_baseUri = baseUri;
 	_proxyHost = "";
 	_stunnelHost = "";
+	_authorization = "";
 	_proxyPort = 0;
 	_stunnelPort = 0;
 	_debugLevel = 0;
@@ -118,6 +126,16 @@ void HttpClient::Init(string baseUri)
 void HttpClient::Yield()
 {
 	YieldToAnyThread();
+}
+
+string HttpClient::GetAuthHeader()
+{
+	if (_authorization != "")
+	{
+		return "Authorization: " + _authorization + "\r\n";
+	}
+	
+	return "";
 }
 
 void HttpClient::Connect(Uri uri, unsigned long stream)
