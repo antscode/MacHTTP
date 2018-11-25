@@ -49,6 +49,7 @@ public:
 	void Post(string requestUri, string content, std::function<void(HttpResponse)> onComplete);
 	void Get(Uri requestUri, std::function<void(HttpResponse)> onComplete);
 	void Post(Uri requestUri, string content, std::function<void(HttpResponse)> onComplete);
+	void Put(Uri requestUri, string content, function<void(HttpResponse)> onComplete);
 	void SetProxy(string host, int port);
 	void SetCipherSuite(int cipherSuite);
 	void SetDebugLevel(int debugLevel);
@@ -80,6 +81,7 @@ private:
 	string GetRemoteHost(Uri &uri);
 	int GetRemotePort(Uri &uri);
 	void Connect(Uri uri, unsigned long stream);
+	void PutPost(Uri requestUri, string httpMethod, string content, function<void(HttpResponse)> onComplete);
 	void Request(Uri uri, string request, std::function<void(HttpResponse)> onComplete);
 	bool DoRedirect();
 	void InitParser();

@@ -15,6 +15,7 @@ public:
 	string Path;
 	string ToString();
 	static bool IsAbsolute(string uriStr);
+	static string Encode(const string &value);
 };
 
 #endif

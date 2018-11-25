@@ -75,8 +75,18 @@ void HttpClient::Post(string requestUri, string content, function<void(HttpRespo
 
 void HttpClient::Post(Uri requestUri, string content, function<void(HttpResponse)> onComplete)
 {
-	string postRequest =
-		"POST " + requestUri.Path + " HTTP/1.1\r\n" +
+	PutPost(requestUri, "POST", content, onComplete);
+}
+
+void HttpClient::Put(Uri requestUri, string content, function<void(HttpResponse)> onComplete)
+{
+	PutPost(requestUri, "PUT", content, onComplete);
+}
+
+void HttpClient::PutPost(Uri requestUri, string method, string content, function<void(HttpResponse)> onComplete)
+{
+	string request =
+		method + " " + requestUri.Path + " HTTP/1.1\r\n" +
 		"Host: " + requestUri.Host + "\r\n" +
 		GetAuthHeader() +
 		"User-Agent: MacHTTP\r\n" +
@@ -84,7 +94,7 @@ void HttpClient::Post(Uri requestUri, string content, function<void(HttpResponse
 		"Content-Type: application/x-www-form-urlencoded\r\n\r\n" +
 		content;
 
-	Request(requestUri, postRequest, onComplete);
+	Request(requestUri, request, onComplete);
 }
 
 void HttpClient::SetDebugLevel(int debugLevel)
@@ -709,6 +719,11 @@ static int on_header_value_callback(http_parser* parser, const char *at, size_t 
 	string headerVal = header.substr(0, delim - 1);
 
 	response->Headers[response->CurrentHeader] = headerVal;
+
+	if (response->CurrentHeader == "Content-Length")
+	{
+		response->Content.reserve(stoi(headerVal));
+	}
 
 	return 0;
 }

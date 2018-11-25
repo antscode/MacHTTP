@@ -29,6 +29,10 @@ ELSE()
 	target_link_libraries(MacHTTP MacTCPHelper)
 ENDIF()
 
+# Some options to make things smaller
+set_target_properties(MacHTTP PROPERTIES COMPILE_OPTIONS -ffunction-sections)
+set_target_properties(MacHTTP PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
+
 add_application(MacHTTPTest
 	MacHttpTest.cpp
 	size.r

@@ -2,6 +2,9 @@
 #include <string.h>
 #include <stdexcept>
 #include <algorithm>
+#include <cctype>
+#include <iomanip>
+#include <sstream>
 #include "Uri.h"
 
 extern "C"
@@ -59,4 +62,28 @@ bool Uri::IsAbsolute(string uriStr)
 	transform(uriStr.begin(), uriStr.end(), uriStr.begin(), ::tolower);
 
 	return uriStr.find("http") == 0;
+}
+
+string Uri::Encode(const string &value) 
+{
+	ostringstream escaped;
+	escaped.fill('0');
+	escaped << hex;
+
+	for (string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
+		string::value_type c = (*i);
+
+		// Keep alphanumeric and other accepted characters intact
+		if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+			escaped << c;
+			continue;
+		}
+
+		// Any other characters are percent-encoded
+		escaped << uppercase;
+		escaped << '%' << setw(2) << int((unsigned char)c);
+		escaped << nouppercase;
+	}
+
+	return escaped.str();
 }
