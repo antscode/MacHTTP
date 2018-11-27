@@ -20,8 +20,8 @@ bool _doRequest = true;
 int _curRequest = 0;
 HttpClient _httpClient;
 
-void DoRequest(std::string title, std::string url);
-void OnResponse(HttpResponse response);
+void DoRequest(string& title, string& url);
+void OnResponse(HttpResponse& response);
 
 int main()
 {
@@ -45,7 +45,7 @@ int main()
 	return 0;
 }
 
-void WriteImage(string msg)
+void WriteImage(string& msg)
 {
 	FILE *fp;
 	fp = fopen("Mac HD (68K):mac.jpg", "wb");
@@ -59,7 +59,7 @@ void WriteImage(string msg)
 	}
 }
 
-void DoRequest(std::string title, std::string url)
+void DoRequest(string& title, string& url)
 {
 	printf("%s (press return)...\n", title.c_str());
 	fflush(stdout);
@@ -71,7 +71,7 @@ void DoRequest(std::string title, std::string url)
 	_doRequest = false;
 }
 
-void OnResponse(HttpResponse response)
+void OnResponse(HttpResponse& response)
 {
 	printf("Status: %d\n\n", response.StatusCode);
 
@@ -79,7 +79,7 @@ void OnResponse(HttpResponse response)
 	{
 		printf("Headers:\n\n");
 
-		for (std::map<std::string, std::string>::iterator it = response.Headers.begin(); it != response.Headers.end(); ++it)
+		for (map<string, string>::iterator it = response.Headers.begin(); it != response.Headers.end(); ++it)
 		{
 			printf("%s: %s\n", it->first.c_str(), it->second.c_str());
 		}

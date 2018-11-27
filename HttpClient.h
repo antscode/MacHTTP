@@ -45,11 +45,11 @@ public:
 	
 	HttpClient();
 	HttpClient(string baseUri);
-	void Get(string requestUri, std::function<void(HttpResponse)> onComplete);
-	void Post(string requestUri, string content, std::function<void(HttpResponse)> onComplete);
-	void Get(Uri requestUri, std::function<void(HttpResponse)> onComplete);
-	void Post(Uri requestUri, string content, std::function<void(HttpResponse)> onComplete);
-	void Put(Uri requestUri, string content, function<void(HttpResponse)> onComplete);
+	void Get(const string& requestUri, std::function<void(HttpResponse&)> onComplete);
+	void Post(const string& requestUri, const string& content, std::function<void(HttpResponse&)> onComplete);
+	void Get(const Uri& requestUri, std::function<void(HttpResponse&)> onComplete);
+	void Post(const Uri& requestUri, const string& content, std::function<void(HttpResponse&)> onComplete);
+	void Put(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete);
 	void SetProxy(string host, int port);
 	void SetCipherSuite(int cipherSuite);
 	void SetDebugLevel(int debugLevel);
@@ -70,19 +70,19 @@ private:
 	string _request;
 	RequestStatus _status;
 	HttpResponse _response;
-	std::function<void(HttpResponse)> _onComplete;
+	std::function<void(HttpResponse&)> _onComplete;
 	int _proxyPort;
 	int _stunnelPort;
 	int _debugLevel;
 	bool _cancel;
 
 	void Init(string baseUri);
-	Uri GetUri(string requestUri);
-	string GetRemoteHost(Uri &uri);
-	int GetRemotePort(Uri &uri);
-	void Connect(Uri uri, unsigned long stream);
-	void PutPost(Uri requestUri, string httpMethod, string content, function<void(HttpResponse)> onComplete);
-	void Request(Uri uri, string request, std::function<void(HttpResponse)> onComplete);
+	Uri GetUri(const string& requestUri);
+	string GetRemoteHost(const Uri& uri);
+	int GetRemotePort(const Uri& uri);
+	void Connect(const Uri& uri, unsigned long stream);
+	void PutPost(const Uri& requestUri, const string& httpMethod, const string& content, function<void(HttpResponse&)> onComplete);
+	void Request(const Uri& uri, const string& request, function<void(HttpResponse&)> onComplete);
 	bool DoRedirect();
 	void InitParser();
 	static void Yield();

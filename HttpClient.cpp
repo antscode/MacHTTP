@@ -30,7 +30,7 @@ void HttpClient::SetProxy(string host, int port)
 	_proxyPort = port;
 }
 
-void HttpClient::Get(string requestUri, function<void(HttpResponse)> onComplete)
+void HttpClient::Get(const string& requestUri, function<void(HttpResponse&)> onComplete)
 {
 	try
 	{
@@ -46,7 +46,7 @@ void HttpClient::Get(string requestUri, function<void(HttpResponse)> onComplete)
 	}
 }
 
-void HttpClient::Get(Uri requestUri, function<void(HttpResponse)> onComplete)
+void HttpClient::Get(const Uri& requestUri, function<void(HttpResponse&)> onComplete)
 {
 	string getRequest =
 		"GET " + requestUri.Path + " HTTP/1.1\r\n" +
@@ -57,7 +57,7 @@ void HttpClient::Get(Uri requestUri, function<void(HttpResponse)> onComplete)
 	Request(requestUri, getRequest, onComplete);
 }
 
-void HttpClient::Post(string requestUri, string content, function<void(HttpResponse)> onComplete)
+void HttpClient::Post(const string& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
 {
 	try
 	{
@@ -73,17 +73,19 @@ void HttpClient::Post(string requestUri, string content, function<void(HttpRespo
 	}
 }
 
-void HttpClient::Post(Uri requestUri, string content, function<void(HttpResponse)> onComplete)
+void HttpClient::Post(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
 {
-	PutPost(requestUri, "POST", content, onComplete);
+	string method = "POST";
+	PutPost(requestUri, method, content, onComplete);
 }
 
-void HttpClient::Put(Uri requestUri, string content, function<void(HttpResponse)> onComplete)
+void HttpClient::Put(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
 {
-	PutPost(requestUri, "PUT", content, onComplete);
+	string method = "PUT";
+	PutPost(requestUri, method, content, onComplete);
 }
 
-void HttpClient::PutPost(Uri requestUri, string method, string content, function<void(HttpResponse)> onComplete)
+void HttpClient::PutPost(const Uri& requestUri, const string& method, const string& content, function<void(HttpResponse&)> onComplete)
 {
 	string request =
 		method + " " + requestUri.Path + " HTTP/1.1\r\n" +
@@ -148,7 +150,7 @@ string HttpClient::GetAuthHeader()
 	return "";
 }
 
-void HttpClient::Connect(Uri uri, unsigned long stream)
+void HttpClient::Connect(const Uri& uri, unsigned long stream)
 {
 	HttpResponse response;
 
@@ -166,11 +168,12 @@ void HttpClient::Connect(Uri uri, unsigned long stream)
 		&_cancel);
 }
 
-Uri HttpClient::GetUri(string requestUri)
+Uri HttpClient::GetUri(const string& requestUri)
 {
 	if (!Uri::IsAbsolute(requestUri))
 	{
-		requestUri = _baseUri + requestUri;
+		string absUri = _baseUri + requestUri;
+		return Uri(absUri);
 	}
 
 	return Uri(requestUri);
@@ -184,7 +187,7 @@ void HttpClient::CancelRequest()
 	}
 }
 
-void HttpClient::Request(Uri uri, string request, function<void(HttpResponse)> onComplete)
+void HttpClient::Request(const Uri& uri, const string& request, function<void(HttpResponse&)> onComplete)
 {
 	_uri = uri;
 	_request = request;
@@ -298,7 +301,7 @@ bool HttpClient::DoRedirect()
 	return false;
 }
 
-string HttpClient::GetRemoteHost(Uri &uri)
+string HttpClient::GetRemoteHost(const Uri& uri)
 {
 	if (_proxyHost != "")
 	{
@@ -310,7 +313,7 @@ string HttpClient::GetRemoteHost(Uri &uri)
 	}
 }
 
-int HttpClient::GetRemotePort(Uri &uri)
+int HttpClient::GetRemotePort(const Uri& uri)
 {
 	if (_proxyPort > 0)
 	{
