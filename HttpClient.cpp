@@ -2,6 +2,7 @@
 #include <string.h>
 #include "HttpClient.h"
 #include <stdio.h>
+#include <stdexcept.h>
 
 extern "C"
 {
