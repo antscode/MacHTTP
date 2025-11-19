@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 
 # See: https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
 SET(CMAKE_CXX_FLAGS "-Ofast")
@@ -12,6 +12,8 @@ SET(SSL_ENABLED OFF)
 add_library(MacHTTP STATIC
 	HttpClient.h
 	HttpClient.cpp
+	SimpleHttpClient.h
+	SimpleHttpClient.cpp
 	HttpResponse.h
 	HttpResponse.cpp
 	Uri.h
