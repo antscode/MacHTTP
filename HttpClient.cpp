@@ -1,6 +1,8 @@
 #include <ctype.h>
 #include <string.h>
 #include "HttpClient.h"
+
+#include <stdexcept>
 #include <stdio.h>
 
 extern "C"
