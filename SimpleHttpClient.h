@@ -42,7 +42,6 @@ public:
     void SetDebugLevel(int debugLevel);
     void SetStunnel(string host, int port);
     void SetAuthorization(string authorization);
-    void ProcessRequests();
     void CancelRequest();
     RequestStatus GetStatus();
     void InitThread();
@@ -78,7 +77,6 @@ private:
     void Request(const Uri& uri, const string& request, function<void(HttpResponse&)> onComplete);
     bool DoRedirect();
     void InitParser();
-    static void Yield();
     void HttpRequest();
     string GetAuthHeader();
 

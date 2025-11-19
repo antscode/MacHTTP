@@ -11,7 +11,6 @@
 extern "C"
 {
 	#include <MacTCP.h>
-	#include <Threads.h>
 	#include <mactcp/CvtAddr.h>
 	#include <mactcp/TCPHi.h>
 }
@@ -136,11 +135,6 @@ void SimpleHttpClient::Init(string baseUri)
 	InitParser();
 }
 
-void SimpleHttpClient::Yield()
-{
-	YieldToAnyThread();
-}
-
 string SimpleHttpClient::GetAuthHeader()
 {
 	if (_authorization != "")
@@ -165,7 +159,7 @@ void SimpleHttpClient::Connect(const Uri& uri, unsigned long stream)
 		(Ptr)request.c_str(),
 		(unsigned short)strlen(request.c_str()),
 		false,
-		(GiveTimePtr)Yield,
+		[]{},
 		&_cancel);
 }
 
@@ -230,11 +224,6 @@ void SimpleHttpClient::InitThread()
 SimpleHttpClient::RequestStatus SimpleHttpClient::GetStatus()
 {
 	return _status;
-}
-
-void SimpleHttpClient::ProcessRequests()
-{
-	YieldToAnyThread();
 }
 
 void SimpleHttpClient::HttpRequest()
@@ -321,7 +310,7 @@ bool SimpleHttpClient::Connect()
 
 	// Get remote IP
 	char* hostname = _stunnelHost != "" ? (char*)_stunnelHost.c_str() : (char*)GetRemoteHost(_uri).c_str();
-	err = ConvertStringToAddr(hostname, &ipAddress, (GiveTimePtr)Yield);
+	err = ConvertStringToAddr(hostname, &ipAddress, []{});
 	if (err != noErr)
 	{
 		_response.ErrorCode = ConnectionError;
@@ -330,7 +319,7 @@ bool SimpleHttpClient::Connect()
 	}
 
 	// Open a TCP stream
-	err = CreateStream(&_stream, BUF_SIZE, (GiveTimePtr)Yield, &_cancel);
+	err = CreateStream(&_stream, BUF_SIZE, []{}, &_cancel);
 	if (err != noErr)
 	{
 		_response.ErrorCode = ConnectionError;
@@ -339,7 +328,7 @@ bool SimpleHttpClient::Connect()
 	}
 
 	// Open a connection
-	err = OpenConnection(_stream, ipAddress, _stunnelPort > 0 ? _stunnelPort : GetRemotePort(_uri), 0, (GiveTimePtr)Yield, &_cancel);
+	err = OpenConnection(_stream, ipAddress, _stunnelPort > 0 ? _stunnelPort : GetRemotePort(_uri), 0, []{}, &_cancel);
 	if (err == noErr) {
 		if (_uri.Scheme == "https" && _proxyHost != "")
 		{
@@ -366,7 +355,7 @@ bool SimpleHttpClient::Request()
 		(Ptr)_request.c_str(),
 		(unsigned short)strlen(_request.c_str()),
 		false,
-		(GiveTimePtr)Yield,
+		[]{},
 		&_cancel);
 
 	if (err != noErr)
@@ -395,7 +384,7 @@ bool SimpleHttpClient::Response()
 			_stream,
 			(Ptr)&buf, &dataLength,
 			false,
-			(GiveTimePtr)Yield,
+			[]{},
 			&_cancel);
 
 		ret = http_parser_execute(&_parser, &_settings, (const char*)&buf, dataLength);
@@ -420,8 +409,8 @@ bool SimpleHttpClient::Response()
 
 void SimpleHttpClient::NetClose()
 {
-	CloseConnection(_stream, (GiveTimePtr)Yield, &_cancel);
-	ReleaseStream(_stream, (GiveTimePtr)Yield, &_cancel);
+	CloseConnection(_stream, []{}, &_cancel);
+	ReleaseStream(_stream, []{}, &_cancel);
 
 	if (!DoRedirect())
 	{
