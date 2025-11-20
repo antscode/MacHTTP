@@ -99,6 +99,21 @@ void SimpleHttpClient::PutPost(const Uri& requestUri, const string& method, cons
 	Request(requestUri, request, onComplete);
 }
 
+template<typename T>
+T SimpleHttpClient::Get(const string &requestUri) {
+	throw std::invalid_argument("Not implemented");
+}
+
+template<typename T>
+T SimpleHttpClient::Post(const string &requestUri) {
+	throw std::invalid_argument("Not implemented");
+}
+
+template<typename T>
+T SimpleHttpClient::Put(const string &requestUri) {
+	throw std::invalid_argument("Not implemented");
+}
+
 void SimpleHttpClient::SetDebugLevel(int debugLevel)
 {
 	_debugLevel = debugLevel;

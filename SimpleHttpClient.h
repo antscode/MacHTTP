@@ -30,11 +30,21 @@ public:
 
     SimpleHttpClient();
     explicit SimpleHttpClient(string baseUri);
+
     void Get(const string& requestUri, std::function<void(HttpResponse&)> onComplete);
     void Post(const string& requestUri, const string& content, std::function<void(HttpResponse&)> onComplete);
     void Get(const Uri& requestUri, std::function<void(HttpResponse&)> onComplete);
     void Post(const Uri& requestUri, const string& content, std::function<void(HttpResponse&)> onComplete);
     void Put(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete);
+    // TODO : DELETE
+
+    template<typename T>
+    T Get(const string& requestUri);
+    template<typename T>
+    T Post(const string& requestUri);
+    template<typename T>
+    T Put(const string& requestUri);
+
     void SetProxy(string host, int port);
     void SetDebugLevel(int debugLevel);
     void SetStunnel(string host, int port);
