@@ -41,7 +41,14 @@ add_application(MacHTTPTest
 	CONSOLE
 )
 
+add_application(MacSimpleHTTPTest
+		MacSimpleHttpTest.cpp
+		size.r
+		CONSOLE
+)
+
 target_link_libraries(MacHTTPTest MacHTTP)
+target_link_libraries(MacSimpleHTTPTest MacHTTP)
 
 install(TARGETS MacHTTP
     DESTINATION "lib"
