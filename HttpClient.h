@@ -5,18 +5,13 @@
 #include "Uri.h"
 #include <functional>
 
+#include "SimpleHttpClient.h"
+
 using namespace std;
 
 // Disabled strict HTTP parsing to improve performance
 #ifndef HTTP_PARSER_STRICT
 #define HTTP_PARSER_STRICT 0
-#endif
-
-#ifndef http_parser_h
-extern "C"
-{
-	#include "http_parser.h"
-}
 #endif
 
 #ifdef SSL_ENABLED
@@ -33,73 +28,29 @@ extern "C"
 }
 #endif
 
-class HttpClient
+class HttpClient : public SimpleHttpClient
 {
 public:
-	enum RequestStatus
-	{
-		Idle,
-		Waiting,
-		Running
-	};
-	
 	HttpClient();
 	HttpClient(string baseUri);
-	void Get(const string& requestUri, std::function<void(HttpResponse&)> onComplete);
-	void Post(const string& requestUri, const string& content, std::function<void(HttpResponse&)> onComplete);
-	void Get(const Uri& requestUri, std::function<void(HttpResponse&)> onComplete);
-	void Post(const Uri& requestUri, const string& content, std::function<void(HttpResponse&)> onComplete);
-	void Put(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete);
-	void SetProxy(string host, int port);
 	void SetCipherSuite(int cipherSuite);
-	void SetDebugLevel(int debugLevel);
-	void SetStunnel(string host, int port);
-	void SetAuthorization(string authorization);
 	void ProcessRequests();
-	void CancelRequest();
-	RequestStatus GetStatus();
-	void InitThread();
+	void InitThread() override;
 
 private:
 	static const int BUF_SIZE = 8192;
-	string _baseUri;
-	string _proxyHost;
-	string _stunnelHost;
-	string _authorization;
-	Uri _uri;
-	string _request;
-	RequestStatus _status;
-	HttpResponse _response;
 	std::function<void(HttpResponse&)> _onComplete;
-	int _proxyPort;
-	int _stunnelPort;
-	int _debugLevel;
-	bool _cancel;
 
-	void Init(string baseUri);
-	Uri GetUri(const string& requestUri);
-	string GetRemoteHost(const Uri& uri);
-	int GetRemotePort(const Uri& uri);
-	void Connect(const Uri& uri, unsigned long stream);
-	void PutPost(const Uri& requestUri, const string& httpMethod, const string& content, function<void(HttpResponse&)> onComplete);
-	void Request(const Uri& uri, const string& request, function<void(HttpResponse&)> onComplete);
-	bool DoRedirect();
-	void InitParser();
+	void Init(string baseUri) override;
+	int GetRemotePort(const Uri& uri) override;
+	void Connect(const Uri& uri, unsigned long stream) override;
+	void Request(const Uri& uri, const string& request, function<void(HttpResponse&)> onComplete) override;
 	static void Yield();
-	void HttpRequest();
-	string GetAuthHeader();
 
-	http_parser _parser;
-	http_parser_settings _settings;
-
-	unsigned long _stream;
-	
-	bool Connect();
-	bool Request();
-	bool Response();
-	void NetClose();
-
-	const char* _cRequest;
+	bool Connect() override;
+	bool Request() override;
+	bool Response() override;
+	void NetClose() override;
 
 	#ifdef SSL_ENABLED
 	mbedtls_net_context _server_fd;
@@ -108,7 +59,7 @@ private:
 	mbedtls_x509_crt _cacert;
 	mbedtls_entropy_context _entropy;
 	mbedtls_ctr_drbg_context _ctr_drbg;
-	
+
 	void HttpsRequest();
 	bool SslConnect();
 	bool SslHandshake();
@@ -137,12 +88,6 @@ private:
 	};
 	#endif // SSL_ENABLED
 };
-
-static int on_header_field_callback(http_parser* parser, const char *at, size_t length);
-static int on_header_value_callback(http_parser* parser, const char *at, size_t length);
-static int on_body_callback(http_parser* parser, const char *at, size_t length);
-static int on_status_callback(http_parser* parser, const char *at, size_t length);
-static int on_message_complete_callback(http_parser* parser);
 
 #ifdef MBEDTLS_DEBUG
 static void ssl_debug(void *ctx, int level, const char *file, int line, const char *str);

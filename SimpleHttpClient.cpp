@@ -1,6 +1,4 @@
-
 #include "SimpleHttpClient.h"
-
 
 #include <ctype.h>
 #include <string.h>
@@ -14,8 +12,6 @@ extern "C"
 	#include <mactcp/CvtAddr.h>
 	#include <mactcp/TCPHi.h>
 }
-
-void ThreadEntry(void* param);
 
 SimpleHttpClient::SimpleHttpClient()
 {
@@ -197,17 +193,7 @@ void SimpleHttpClient::Request(const Uri& uri, const string& request, function<v
 	_parser.data = (void*)&_response;
 	http_parser_init(&_parser, HTTP_RESPONSE);
 
-
-	SimpleHttpClient* httpClient = (SimpleHttpClient*)this;
-
-	httpClient->InitThread();
-}
-
-void ThreadEntry(void* param)
-{
-	SimpleHttpClient* httpClient = (SimpleHttpClient*)param;
-
-	httpClient->InitThread();
+	this->InitThread();
 }
 
 void SimpleHttpClient::InitThread()
@@ -285,10 +271,6 @@ int SimpleHttpClient::GetRemotePort(const Uri& uri)
 	if (_proxyPort > 0)
 	{
 		return _proxyPort;
-	}
-	else if(uri.Scheme == "https")
-	{
-		return 443;
 	}
 
 	return 80;

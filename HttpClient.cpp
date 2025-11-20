@@ -16,7 +16,7 @@ extern "C"
 void ThreadEntry(void* param);
 
 HttpClient::HttpClient()
-{ 
+{
 	Init("");
 }
 
@@ -26,130 +26,21 @@ HttpClient::HttpClient(string baseUri)
 }
 
 /* Public functions */
-void HttpClient::SetProxy(string host, int port)
-{
-	_proxyHost = host;
-	_proxyPort = port;
-}
 
-void HttpClient::Get(const string& requestUri, function<void(HttpResponse&)> onComplete)
-{
-	try
-	{
-		Uri uri = GetUri(requestUri);
-
-		Get(uri, onComplete);
-	}
-	catch (const invalid_argument& e)
-	{
-		HttpResponse response;
-		response.ErrorMsg = e.what();
-		onComplete(response);
-	}
-}
-
-void HttpClient::Get(const Uri& requestUri, function<void(HttpResponse&)> onComplete)
-{
-	string getRequest =
-		"GET " + requestUri.Path + " HTTP/1.1\r\n" +
-		"Host: " + requestUri.Host + "\r\n" +
-		GetAuthHeader() +
-		"User-Agent: MacHTTP\r\n\r\n";
-
-	Request(requestUri, getRequest, onComplete);
-}
-
-void HttpClient::Post(const string& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
-{
-	try
-	{
-		Uri uri = GetUri(requestUri);
-
-		Post(uri, content, onComplete);
-	}
-	catch (const invalid_argument& e)
-	{
-		HttpResponse response;
-		response.ErrorMsg = e.what();
-		onComplete(response);
-	}
-}
-
-void HttpClient::Post(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
-{
-	string method = "POST";
-	PutPost(requestUri, method, content, onComplete);
-}
-
-void HttpClient::Put(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
-{
-	string method = "PUT";
-	PutPost(requestUri, method, content, onComplete);
-}
-
-void HttpClient::PutPost(const Uri& requestUri, const string& method, const string& content, function<void(HttpResponse&)> onComplete)
-{
-	string request =
-		method + " " + requestUri.Path + " HTTP/1.1\r\n" +
-		"Host: " + requestUri.Host + "\r\n" +
-		GetAuthHeader() +
-		"User-Agent: MacHTTP\r\n" +
-		"Content-Length: " + to_string(content.length()) + "\r\n" +
-		"Content-Type: application/x-www-form-urlencoded\r\n\r\n" +
-		content;
-
-	Request(requestUri, request, onComplete);
-}
-
-void HttpClient::SetDebugLevel(int debugLevel)
-{
-	_debugLevel = debugLevel;
-}
-
-void HttpClient::SetStunnel(string host, int port)
-{
-	_stunnelHost = host;
-	_stunnelPort = port;
-}
-
-void HttpClient::SetAuthorization(string authorization)
-{
-	_authorization = authorization;
-}
-
-/* Private functions */
+/* Protected functions */
 void HttpClient::Init(string baseUri)
 {
-	MaxApplZone();
-
-	_baseUri = baseUri;
-	_proxyHost = "";
-	_stunnelHost = "";
-	_authorization = "";
-	_proxyPort = 0;
-	_stunnelPort = 0;
-	_debugLevel = 0;
-	_status = Idle;
-	InitParser();
+	SimpleHttpClient::Init(baseUri);
 	
 	#ifdef SSL_ENABLED
 	_overrideCipherSuite[0] = 0;
 	#endif
 }
 
+/* Private functions */
 void HttpClient::Yield()
 {
 	YieldToAnyThread();
-}
-
-string HttpClient::GetAuthHeader()
-{
-	if (_authorization != "")
-	{
-		return "Authorization: " + _authorization + "\r\n";
-	}
-	
-	return "";
 }
 
 void HttpClient::Connect(const Uri& uri, unsigned long stream)
@@ -168,25 +59,6 @@ void HttpClient::Connect(const Uri& uri, unsigned long stream)
 		false, 
 		(GiveTimePtr)Yield,
 		&_cancel);
-}
-
-Uri HttpClient::GetUri(const string& requestUri)
-{
-	if (!Uri::IsAbsolute(requestUri))
-	{
-		string absUri = _baseUri + requestUri;
-		return Uri(absUri);
-	}
-
-	return Uri(requestUri);
-}
-
-void HttpClient::CancelRequest()
-{
-	if (_status != Idle)
-	{
-		_cancel = true;
-	}
 }
 
 void HttpClient::Request(const Uri& uri, const string& request, function<void(HttpResponse&)> onComplete)
@@ -239,23 +111,9 @@ void HttpClient::InitThread()
 	#endif
 }
 
-HttpClient::RequestStatus HttpClient::GetStatus()
-{
-	return _status;
-}
-
 void HttpClient::ProcessRequests()
 {
 	YieldToAnyThread();
-}
-
-void HttpClient::HttpRequest()
-{
-	if (Connect())
-		if (Request())
-			Response();
-
-	NetClose();
 }
 
 #ifdef SSL_ENABLED
@@ -270,63 +128,14 @@ void HttpClient::HttpsRequest()
 }
 #endif // SSL_ENABLED
 
-void HttpClient::InitParser()
-{
-	// Set parser data
-	_parser.data = (void*)&_response;
-
-	// Parser settings
-	memset(&_settings, 0, sizeof(_settings));
-	_settings.on_status = on_status_callback;
-	_settings.on_header_field = on_header_field_callback;
-	_settings.on_header_value = on_header_value_callback;
-	_settings.on_message_complete = on_message_complete_callback;
-	_settings.on_body = on_body_callback;
-}
-
-bool HttpClient::DoRedirect()
-{
-	if (_response.Success && _response.StatusCode == 302 && _response.Headers.count("Location") > 0)
-	{
-		string location = _response.Headers["Location"];
-
-		if (!Uri::IsAbsolute(location))
-		{
-			location = _uri.Scheme + "://" + _uri.Host + location;
-		}
-
-		// Perform 302 redirect
-		Get(location, _onComplete);
-		return true;
-	}
-
-	return false;
-}
-
-string HttpClient::GetRemoteHost(const Uri& uri)
-{
-	if (_proxyHost != "")
-	{
-		return _proxyHost;
-	}
-	else
-	{
-		return uri.Host;
-	}
-}
-
 int HttpClient::GetRemotePort(const Uri& uri)
 {
-	if (_proxyPort > 0)
-	{
-		return _proxyPort;
-	}
-	else if(uri.Scheme == "https")
+	if(uri.Scheme == "https")
 	{
 		return 443;
 	}
 
-	return 80;
+	return SimpleHttpClient::GetRemotePort(uri);
 }
 
 bool HttpClient::Connect()
