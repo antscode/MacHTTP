@@ -10,8 +10,8 @@ SET(SSL_ENABLED OFF)
 # ADD_DEFINITIONS (-DMBEDTLS_DEBUG="ON")
 
 add_library(MacHTTP STATIC
-	HttpClient.h
-	HttpClient.cpp
+	ThreadedHttpClient.h
+	ThreadedHttpClient.cpp
 	SimpleHttpClient.h
 	SimpleHttpClient.cpp
 	HttpResponse.h
@@ -35,8 +35,8 @@ ENDIF()
 set_target_properties(MacHTTP PROPERTIES COMPILE_OPTIONS -ffunction-sections)
 set_target_properties(MacHTTP PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
 
-add_application(MacHTTPTest
-	tests/MacHttpTest.cpp
+add_application(MacThreadedHTTPTest
+	tests/MacThreadedHttpTest.cpp
 	size.r
 	CONSOLE
 )
@@ -47,7 +47,7 @@ add_application(MacSimpleHTTPTest
 	CONSOLE
 )
 
-target_link_libraries(MacHTTPTest MacHTTP)
+target_link_libraries(MacThreadedHTTPTest MacHTTP)
 target_link_libraries(MacSimpleHTTPTest MacHTTP)
 
 install(TARGETS MacHTTP

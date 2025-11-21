@@ -1,6 +1,6 @@
 #include <ctype.h>
 #include <string.h>
-#include "HttpClient.h"
+#include "ThreadedHttpClient.h"
 
 #include <stdexcept>
 #include <stdio.h>
@@ -15,12 +15,12 @@ extern "C"
 
 void ThreadEntry(void* param);
 
-HttpClient::HttpClient()
+ThreadedHttpClient::ThreadedHttpClient()
 {
 	Init("");
 }
 
-HttpClient::HttpClient(string baseUri)
+ThreadedHttpClient::ThreadedHttpClient(string baseUri)
 {
 	Init(baseUri);
 }
@@ -28,7 +28,7 @@ HttpClient::HttpClient(string baseUri)
 /* Public functions */
 
 /* Protected functions */
-void HttpClient::Init(string baseUri)
+void ThreadedHttpClient::Init(string baseUri)
 {
 	SimpleHttpClient::Init(baseUri);
 	
@@ -38,12 +38,12 @@ void HttpClient::Init(string baseUri)
 }
 
 /* Private functions */
-void HttpClient::Yield()
+void ThreadedHttpClient::Yield()
 {
 	YieldToAnyThread();
 }
 
-void HttpClient::Connect(const Uri& uri, unsigned long stream)
+void ThreadedHttpClient::Connect(const Uri& uri, unsigned long stream)
 {
 	HttpResponse response;
 
@@ -61,7 +61,7 @@ void HttpClient::Connect(const Uri& uri, unsigned long stream)
 		&_cancel);
 }
 
-void HttpClient::Request(const Uri& uri, const string& request, function<void(HttpResponse&)> onComplete)
+void ThreadedHttpClient::Request(const Uri& uri, const string& request, function<void(HttpResponse&)> onComplete)
 {
 	_uri = uri;
 	_request = request;
@@ -89,12 +89,12 @@ void HttpClient::Request(const Uri& uri, const string& request, function<void(Ht
 
 void ThreadEntry(void* param)
 {
-	HttpClient* httpClient = (HttpClient*)param;
+	ThreadedHttpClient* httpClient = (ThreadedHttpClient*)param;
 
 	httpClient->InitThread();
 }
 
-void HttpClient::InitThread()
+void ThreadedHttpClient::InitThread()
 {
 	_status = Running;
 
@@ -111,13 +111,13 @@ void HttpClient::InitThread()
 	#endif
 }
 
-void HttpClient::ProcessRequests()
+void ThreadedHttpClient::ProcessRequests()
 {
 	YieldToAnyThread();
 }
 
 #ifdef SSL_ENABLED
-void HttpClient::HttpsRequest()
+void ThreadedHttpClient::HttpsRequest()
 {
 	if (SslConnect())
 		if(SslHandshake())
@@ -128,7 +128,7 @@ void HttpClient::HttpsRequest()
 }
 #endif // SSL_ENABLED
 
-int HttpClient::GetRemotePort(const Uri& uri)
+int ThreadedHttpClient::GetRemotePort(const Uri& uri)
 {
 	if(uri.Scheme == "https")
 	{
@@ -138,7 +138,7 @@ int HttpClient::GetRemotePort(const Uri& uri)
 	return SimpleHttpClient::GetRemotePort(uri);
 }
 
-bool HttpClient::Connect()
+bool ThreadedHttpClient::Connect()
 {
 	OSErr err;
 	unsigned long ipAddress;
@@ -191,7 +191,7 @@ bool HttpClient::Connect()
 	return true;
 }
 
-bool HttpClient::Request()
+bool ThreadedHttpClient::Request()
 {
 	// Send the request
 	OSErr err = SendData(
@@ -213,7 +213,7 @@ bool HttpClient::Request()
 	return true;
 }
 
-bool HttpClient::Response()
+bool ThreadedHttpClient::Response()
 {
 	unsigned char buf[BUF_SIZE];
 	unsigned short dataLength;
@@ -251,7 +251,7 @@ bool HttpClient::Response()
 	return true;
 }
 
-void HttpClient::NetClose()
+void ThreadedHttpClient::NetClose()
 {
 	CloseConnection(_stream, (GiveTimePtr)Yield, &_cancel);
 	ReleaseStream(_stream, (GiveTimePtr)Yield, &_cancel);
@@ -271,12 +271,12 @@ void HttpClient::NetClose()
 }
 
 #ifdef SSL_ENABLED
-void HttpClient::SetCipherSuite(int cipherSuite)
+void ThreadedHttpClient::SetCipherSuite(int cipherSuite)
 {
 	_overrideCipherSuite[0] = cipherSuite;
 }
 
-bool HttpClient::SslConnect()
+bool ThreadedHttpClient::SslConnect()
 {
 	const char *pers = "HttpClient";
 	int ret;
@@ -374,7 +374,7 @@ bool HttpClient::SslConnect()
 	return true;
 }
 
-bool HttpClient::SslHandshake()
+bool ThreadedHttpClient::SslHandshake()
 {
 	int ret = mbedtls_ssl_handshake(&_ssl);
 
@@ -403,7 +403,7 @@ bool HttpClient::SslHandshake()
 	return false;
 }
 
-bool HttpClient::SslVerifyCert()
+bool ThreadedHttpClient::SslVerifyCert()
 {
 	/* Verify the server certificate */
 	//	uint32_t flags;
@@ -419,7 +419,7 @@ bool HttpClient::SslVerifyCert()
 	return true;
 }
 
-bool HttpClient::SslRequest()
+bool ThreadedHttpClient::SslRequest()
 {
 	if (_cRequest == NULL)
 	{
@@ -447,7 +447,7 @@ bool HttpClient::SslRequest()
 	return true;
 }
 
-bool HttpClient::SslResponse()
+bool ThreadedHttpClient::SslResponse()
 {
 	unsigned char buf[4096];
 	int len;
@@ -479,7 +479,7 @@ bool HttpClient::SslResponse()
 	return true;
 }
 
-void HttpClient::SslClose()
+void ThreadedHttpClient::SslClose()
 {
 	mbedtls_ssl_close_notify(&_ssl);
 	mbedtls_net_free(&_server_fd);

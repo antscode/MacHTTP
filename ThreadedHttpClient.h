@@ -1,5 +1,5 @@
-#ifndef __HTTP_CLIENT__
-#define __HTTP_CLIENT__
+#ifndef __THREADED_HTTP_CLIENT__
+#define __THREADED_HTTP_CLIENT__
 
 #include "HttpResponse.h"
 #include "Uri.h"
@@ -28,11 +28,11 @@ extern "C"
 }
 #endif
 
-class HttpClient : public SimpleHttpClient
+class ThreadedHttpClient : public SimpleHttpClient
 {
 public:
-	HttpClient();
-	HttpClient(string baseUri);
+	ThreadedHttpClient();
+	ThreadedHttpClient(string baseUri);
 	void SetCipherSuite(int cipherSuite);
 	void ProcessRequests();
 	void InitThread() override;
