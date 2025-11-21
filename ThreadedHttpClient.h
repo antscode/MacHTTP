@@ -5,7 +5,7 @@
 #include "Uri.h"
 #include <functional>
 
-#include "SimpleHttpClient.h"
+#include "HttpClient.h"
 
 using namespace std;
 
@@ -28,7 +28,7 @@ extern "C"
 }
 #endif
 
-class ThreadedHttpClient : public SimpleHttpClient
+class ThreadedHttpClient : public HttpClient
 {
 public:
 	ThreadedHttpClient();

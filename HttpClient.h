@@ -1,5 +1,5 @@
-#ifndef MACHTTP_SIMPLEHTTPCLIENT
-#define MACHTTP_SIMPLEHTTPCLIENT
+#ifndef MACHTTP_HTTPCLIENT
+#define MACHTTP_HTTPCLIENT
 
 #include "HttpResponse.h"
 #include "Uri.h"
@@ -19,7 +19,7 @@ extern "C"
 }
 #endif
 
-class SimpleHttpClient {
+class HttpClient {
 public:
     enum RequestStatus
     {
@@ -28,8 +28,8 @@ public:
         Running
     };
 
-    SimpleHttpClient();
-    explicit SimpleHttpClient(string baseUri);
+    HttpClient();
+    explicit HttpClient(string baseUri);
 
     void Get(const string& requestUri, std::function<void(HttpResponse&)> onComplete);
     void Post(const string& requestUri, const string& content, std::function<void(HttpResponse&)> onComplete);
@@ -110,4 +110,4 @@ private:
 };
 
 
-#endif //MACHTTP_SIMPLEHTTPCLIENT
+#endif //MACHTTP_HTTPCLIENT

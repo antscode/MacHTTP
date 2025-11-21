@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <vector>
-#include "../SimpleHttpClient.h"
+#include "../HttpClient.h"
 
 using namespace std;
 
@@ -17,14 +17,14 @@ string _requests[4][3] =
 
 bool _doRequest = true;
 int _curRequest = 0;
-SimpleHttpClient _httpClient;
+HttpClient _httpClient;
 
 void DoRequest(string& title, string& url);
 void OnResponse(HttpResponse& response);
 
 int main()
 {
-    SimpleHttpClient::SetGlobalOnWaiting([]{printf("waiting");});
+    HttpClient::SetGlobalOnWaiting([]{printf("waiting");});
 
     while (_curRequest < arraylen(_requests))
     {

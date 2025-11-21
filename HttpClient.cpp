@@ -1,4 +1,4 @@
-#include "SimpleHttpClient.h"
+#include "HttpClient.h"
 
 #include <ctype.h>
 #include <string.h>
@@ -13,24 +13,24 @@ extern "C"
 	#include <mactcp/TCPHi.h>
 }
 
-SimpleHttpClient::SimpleHttpClient()
+HttpClient::HttpClient()
 {
 	Init("");
 }
 
-SimpleHttpClient::SimpleHttpClient(string baseUri)
+HttpClient::HttpClient(string baseUri)
 {
 	Init(baseUri);
 }
 
 /* Public functions */
-void SimpleHttpClient::SetProxy(string host, int port)
+void HttpClient::SetProxy(string host, int port)
 {
 	_proxyHost = host;
 	_proxyPort = port;
 }
 
-void SimpleHttpClient::Get(const string& requestUri, function<void(HttpResponse&)> onComplete)
+void HttpClient::Get(const string& requestUri, function<void(HttpResponse&)> onComplete)
 {
 	try
 	{
@@ -46,7 +46,7 @@ void SimpleHttpClient::Get(const string& requestUri, function<void(HttpResponse&
 	}
 }
 
-void SimpleHttpClient::Get(const Uri& requestUri, function<void(HttpResponse&)> onComplete)
+void HttpClient::Get(const Uri& requestUri, function<void(HttpResponse&)> onComplete)
 {
 	string getRequest =
 		"GET " + requestUri.Path + " HTTP/1.1\r\n" +
@@ -57,7 +57,7 @@ void SimpleHttpClient::Get(const Uri& requestUri, function<void(HttpResponse&)> 
 	Request(requestUri, getRequest, onComplete);
 }
 
-void SimpleHttpClient::Post(const string& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
+void HttpClient::Post(const string& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
 {
 	try
 	{
@@ -73,26 +73,26 @@ void SimpleHttpClient::Post(const string& requestUri, const string& content, fun
 	}
 }
 
-void SimpleHttpClient::Post(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
+void HttpClient::Post(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
 {
 	string method = "POST";
 	PutPost(requestUri, method, content, onComplete);
 }
 
-void SimpleHttpClient::Put(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
+void HttpClient::Put(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete)
 {
 	string method = "PUT";
 	PutPost(requestUri, method, content, onComplete);
 }
 
-void SimpleHttpClient::ExecuteOnWaiting() {
+void HttpClient::ExecuteOnWaiting() {
 	if (!g_onWaiting)
 		g_onWaiting = []{};
 
 	g_onWaiting();
 }
 
-void SimpleHttpClient::PutPost(const Uri& requestUri, const string& method, const string& content, function<void(HttpResponse&)> onComplete)
+void HttpClient::PutPost(const Uri& requestUri, const string& method, const string& content, function<void(HttpResponse&)> onComplete)
 {
 	string request =
 		method + " " + requestUri.Path + " HTTP/1.1\r\n" +
@@ -107,42 +107,42 @@ void SimpleHttpClient::PutPost(const Uri& requestUri, const string& method, cons
 }
 
 template<typename T>
-T SimpleHttpClient::Get(const string &requestUri) {
+T HttpClient::Get(const string &requestUri) {
 	throw std::invalid_argument("Not implemented");
 }
 
 template<typename T>
-T SimpleHttpClient::Post(const string &requestUri) {
+T HttpClient::Post(const string &requestUri) {
 	throw std::invalid_argument("Not implemented");
 }
 
 template<typename T>
-T SimpleHttpClient::Put(const string &requestUri) {
+T HttpClient::Put(const string &requestUri) {
 	throw std::invalid_argument("Not implemented");
 }
 
-void SimpleHttpClient::SetDebugLevel(int debugLevel)
+void HttpClient::SetDebugLevel(int debugLevel)
 {
 	_debugLevel = debugLevel;
 }
 
-void SimpleHttpClient::SetStunnel(string host, int port)
+void HttpClient::SetStunnel(string host, int port)
 {
 	_stunnelHost = host;
 	_stunnelPort = port;
 }
 
-void SimpleHttpClient::SetAuthorization(string authorization)
+void HttpClient::SetAuthorization(string authorization)
 {
 	_authorization = authorization;
 }
 
-void SimpleHttpClient::SetGlobalOnWaiting(std::function<void()> onWaiting) {
+void HttpClient::SetGlobalOnWaiting(std::function<void()> onWaiting) {
 	g_onWaiting = onWaiting;
 }
 
 /* Private functions */
-void SimpleHttpClient::Init(string baseUri)
+void HttpClient::Init(string baseUri)
 {
 	MaxApplZone();
 
@@ -157,7 +157,7 @@ void SimpleHttpClient::Init(string baseUri)
 	InitParser();
 }
 
-string SimpleHttpClient::GetAuthHeader()
+string HttpClient::GetAuthHeader()
 {
 	if (_authorization != "")
 	{
@@ -167,7 +167,7 @@ string SimpleHttpClient::GetAuthHeader()
 	return "";
 }
 
-void SimpleHttpClient::Connect(const Uri& uri, unsigned long stream)
+void HttpClient::Connect(const Uri& uri, unsigned long stream)
 {
 	HttpResponse response;
 
@@ -185,7 +185,7 @@ void SimpleHttpClient::Connect(const Uri& uri, unsigned long stream)
 		&_cancel);
 }
 
-Uri SimpleHttpClient::GetUri(const string& requestUri)
+Uri HttpClient::GetUri(const string& requestUri)
 {
 	if (!Uri::IsAbsolute(requestUri))
 	{
@@ -196,7 +196,7 @@ Uri SimpleHttpClient::GetUri(const string& requestUri)
 	return Uri(requestUri);
 }
 
-void SimpleHttpClient::CancelRequest()
+void HttpClient::CancelRequest()
 {
 	if (_status != Idle)
 	{
@@ -204,7 +204,7 @@ void SimpleHttpClient::CancelRequest()
 	}
 }
 
-void SimpleHttpClient::Request(const Uri& uri, const string& request, function<void(HttpResponse&)> onComplete)
+void HttpClient::Request(const Uri& uri, const string& request, function<void(HttpResponse&)> onComplete)
 {
 	_uri = uri;
 	_request = request;
@@ -222,7 +222,7 @@ void SimpleHttpClient::Request(const Uri& uri, const string& request, function<v
 	this->InitThread();
 }
 
-void SimpleHttpClient::InitThread()
+void HttpClient::InitThread()
 {
 	_status = Running;
 
@@ -233,12 +233,12 @@ void SimpleHttpClient::InitThread()
 	}
 }
 
-SimpleHttpClient::RequestStatus SimpleHttpClient::GetStatus()
+HttpClient::RequestStatus HttpClient::GetStatus()
 {
 	return _status;
 }
 
-void SimpleHttpClient::HttpRequest()
+void HttpClient::HttpRequest()
 {
 	if (Connect())
 		if (Request())
@@ -247,7 +247,7 @@ void SimpleHttpClient::HttpRequest()
 	NetClose();
 }
 
-void SimpleHttpClient::InitParser()
+void HttpClient::InitParser()
 {
 	// Set parser data
 	_parser.data = (void*)&_response;
@@ -261,7 +261,7 @@ void SimpleHttpClient::InitParser()
 	_settings.on_body = on_body_callback;
 }
 
-bool SimpleHttpClient::DoRedirect()
+bool HttpClient::DoRedirect()
 {
 	if (_response.Success && _response.StatusCode == 302 && _response.Headers.count("Location") > 0)
 	{
@@ -280,7 +280,7 @@ bool SimpleHttpClient::DoRedirect()
 	return false;
 }
 
-string SimpleHttpClient::GetRemoteHost(const Uri& uri)
+string HttpClient::GetRemoteHost(const Uri& uri)
 {
 	if (_proxyHost != "")
 	{
@@ -292,7 +292,7 @@ string SimpleHttpClient::GetRemoteHost(const Uri& uri)
 	}
 }
 
-int SimpleHttpClient::GetRemotePort(const Uri& uri)
+int HttpClient::GetRemotePort(const Uri& uri)
 {
 	if (_proxyPort > 0)
 	{
@@ -302,7 +302,7 @@ int SimpleHttpClient::GetRemotePort(const Uri& uri)
 	return 80;
 }
 
-bool SimpleHttpClient::Connect()
+bool HttpClient::Connect()
 {
 	OSErr err;
 	unsigned long ipAddress;
@@ -355,7 +355,7 @@ bool SimpleHttpClient::Connect()
 	return true;
 }
 
-bool SimpleHttpClient::Request()
+bool HttpClient::Request()
 {
 	// Send the request
 	OSErr err = SendData(
@@ -377,7 +377,7 @@ bool SimpleHttpClient::Request()
 	return true;
 }
 
-bool SimpleHttpClient::Response()
+bool HttpClient::Response()
 {
 	unsigned char buf[BUF_SIZE];
 	unsigned short dataLength;
@@ -415,7 +415,7 @@ bool SimpleHttpClient::Response()
 	return true;
 }
 
-void SimpleHttpClient::NetClose()
+void HttpClient::NetClose()
 {
 	CloseConnection(_stream, (GiveTimePtr)ExecuteOnWaiting, &_cancel);
 	ReleaseStream(_stream, (GiveTimePtr)ExecuteOnWaiting, &_cancel);
@@ -434,14 +434,14 @@ void SimpleHttpClient::NetClose()
 	}
 }
 
-int SimpleHttpClient::on_body_callback(http_parser* parser, const char *at, size_t length)
+int HttpClient::on_body_callback(http_parser* parser, const char *at, size_t length)
 {
 	HttpResponse* response = (HttpResponse*)parser->data;
 	response->Content.append(at, length);
 	return 0;
 }
 
-int SimpleHttpClient::on_header_field_callback(http_parser* parser, const char *at, size_t length)
+int HttpClient::on_header_field_callback(http_parser* parser, const char *at, size_t length)
 {
 	HttpResponse* response = (HttpResponse*)parser->data;
 
@@ -455,7 +455,7 @@ int SimpleHttpClient::on_header_field_callback(http_parser* parser, const char *
 	return 0;
 }
 
-int SimpleHttpClient::on_header_value_callback(http_parser* parser, const char *at, size_t length)
+int HttpClient::on_header_value_callback(http_parser* parser, const char *at, size_t length)
 {
 	HttpResponse* response = (HttpResponse*)parser->data;
 
@@ -473,14 +473,14 @@ int SimpleHttpClient::on_header_value_callback(http_parser* parser, const char *
 	return 0;
 }
 
-int SimpleHttpClient::on_message_complete_callback(http_parser* parser)
+int HttpClient::on_message_complete_callback(http_parser* parser)
 {
 	HttpResponse* response = (HttpResponse*)parser->data;
 	response->MessageComplete = true;
 	return 0;
 }
 
-int SimpleHttpClient::on_status_callback(http_parser* parser, const char *at, size_t length)
+int HttpClient::on_status_callback(http_parser* parser, const char *at, size_t length)
 {
 	HttpResponse* response = (HttpResponse*)parser->data;
 	response->StatusCode = parser->status_code;

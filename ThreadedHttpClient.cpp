@@ -30,7 +30,7 @@ ThreadedHttpClient::ThreadedHttpClient(string baseUri)
 /* Protected functions */
 void ThreadedHttpClient::Init(string baseUri)
 {
-	SimpleHttpClient::Init(baseUri);
+	HttpClient::Init(baseUri);
 	
 	#ifdef SSL_ENABLED
 	_overrideCipherSuite[0] = 0;
@@ -135,7 +135,7 @@ int ThreadedHttpClient::GetRemotePort(const Uri& uri)
 		return 443;
 	}
 
-	return SimpleHttpClient::GetRemotePort(uri);
+	return HttpClient::GetRemotePort(uri);
 }
 
 bool ThreadedHttpClient::Connect()

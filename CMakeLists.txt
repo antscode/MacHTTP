@@ -12,8 +12,8 @@ SET(SSL_ENABLED OFF)
 add_library(MacHTTP STATIC
 	ThreadedHttpClient.h
 	ThreadedHttpClient.cpp
-	SimpleHttpClient.h
-	SimpleHttpClient.cpp
+	HttpClient.h
+	HttpClient.cpp
 	HttpResponse.h
 	HttpResponse.cpp
 	Uri.h
@@ -41,14 +41,14 @@ add_application(MacThreadedHTTPTest
 	CONSOLE
 )
 
-add_application(MacSimpleHTTPTest
-	tests/MacSimpleHttpTest.cpp
+add_application(MacHTTPTest
+	tests/MacHttpTest.cpp
 	size.r
 	CONSOLE
 )
 
 target_link_libraries(MacThreadedHTTPTest MacHTTP)
-target_link_libraries(MacSimpleHTTPTest MacHTTP)
+target_link_libraries(MacHTTPTest MacHTTP)
 
 install(TARGETS MacHTTP
     DESTINATION "lib"
