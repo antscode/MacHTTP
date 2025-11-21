@@ -503,59 +503,6 @@ void HttpClient::SslClose()
 }
 #endif // SSL_ENABLED
 
-static int on_body_callback(http_parser* parser, const char *at, size_t length) 
-{
-	HttpResponse* response = (HttpResponse*)parser->data;
-	response->Content.append(at, length);
-	return 0;
-}
-
-static int on_header_field_callback(http_parser* parser, const char *at, size_t length)
-{
-	HttpResponse* response = (HttpResponse*)parser->data;
-
-	string header = string(at);
-	int delim = header.find(":");
-	string headerName = header.substr(0, delim);
-
-	response->Headers.insert(pair<string, string>(headerName, ""));
-	response->CurrentHeader = headerName;
-
-	return 0;
-}
-
-static int on_header_value_callback(http_parser* parser, const char *at, size_t length)
-{
-	HttpResponse* response = (HttpResponse*)parser->data;
-
-	string header = string(at);
-	int delim = header.find("\n");
-	string headerVal = header.substr(0, delim - 1);
-
-	response->Headers[response->CurrentHeader] = headerVal;
-
-	if (response->CurrentHeader == "Content-Length")
-	{
-		response->Content.reserve(stoi(headerVal));
-	}
-
-	return 0;
-}
-
-static int on_message_complete_callback(http_parser* parser) 
-{
-	HttpResponse* response = (HttpResponse*)parser->data;
-	response->MessageComplete = true;
-	return 0;
-}
-
-static int on_status_callback(http_parser* parser, const char *at, size_t length)
-{
-	HttpResponse* response = (HttpResponse*)parser->data;
-	response->StatusCode = parser->status_code;
-	return 0;
-}
-
 #ifdef MBEDTLS_DEBUG
 static void ssl_debug(void *ctx, int level,
 	const char *file, int line,
