@@ -36,14 +36,6 @@ public:
     void Get(const Uri& requestUri, std::function<void(HttpResponse&)> onComplete);
     void Post(const Uri& requestUri, const string& content, std::function<void(HttpResponse&)> onComplete);
     void Put(const Uri& requestUri, const string& content, function<void(HttpResponse&)> onComplete);
-    // TODO : DELETE
-
-    template<typename T>
-    T Get(const string& requestUri);
-    template<typename T>
-    T Post(const string& requestUri);
-    template<typename T>
-    T Put(const string& requestUri);
 
     void SetProxy(string host, int port);
     void SetDebugLevel(int debugLevel);
@@ -63,15 +55,20 @@ public:
     static int on_message_complete_callback(http_parser* parser);
 
 protected:
+    http_parser _parser;
+    http_parser_settings _settings;
+
+    HttpResponse _response;
     string _baseUri;
     string _proxyHost;
     string _stunnelHost;
-    Uri _uri;
     string _request;
+    Uri _uri;
     RequestStatus _status;
-    HttpResponse _response;
-    std::function<void(HttpResponse&)> _onComplete;
+    unsigned long _stream;
     int _stunnelPort;
+    std::function<void(HttpResponse&)> _onComplete;
+    const char* _cRequest;
     bool _cancel;
 
     Uri GetUri(const string& requestUri);
@@ -83,17 +80,10 @@ protected:
     bool DoRedirect();
     virtual void HttpRequest();
 
-    http_parser _parser;
-    http_parser_settings _settings;
-
-    unsigned long _stream;
-
     virtual bool Connect();
     virtual bool Request();
     virtual bool Response();
     virtual void NetClose();
-
-    const char* _cRequest;
 
 private:
     static const int BUF_SIZE = 8192;

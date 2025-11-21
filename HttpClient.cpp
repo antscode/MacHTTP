@@ -106,21 +106,6 @@ void HttpClient::PutPost(const Uri& requestUri, const string& method, const stri
 	Request(requestUri, request, onComplete);
 }
 
-template<typename T>
-T HttpClient::Get(const string &requestUri) {
-	throw std::invalid_argument("Not implemented");
-}
-
-template<typename T>
-T HttpClient::Post(const string &requestUri) {
-	throw std::invalid_argument("Not implemented");
-}
-
-template<typename T>
-T HttpClient::Put(const string &requestUri) {
-	throw std::invalid_argument("Not implemented");
-}
-
 void HttpClient::SetDebugLevel(int debugLevel)
 {
 	_debugLevel = debugLevel;
