@@ -36,15 +36,15 @@ set_target_properties(MacHTTP PROPERTIES COMPILE_OPTIONS -ffunction-sections)
 set_target_properties(MacHTTP PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
 
 add_application(MacHTTPTest
-	MacHttpTest.cpp
+	tests/MacHttpTest.cpp
 	size.r
 	CONSOLE
 )
 
 add_application(MacSimpleHTTPTest
-		MacSimpleHttpTest.cpp
-		size.r
-		CONSOLE
+	tests/MacSimpleHttpTest.cpp
+	size.r
+	CONSOLE
 )
 
 target_link_libraries(MacHTTPTest MacHTTP)
