@@ -49,6 +49,9 @@ public:
     void SetDebugLevel(int debugLevel);
     void SetStunnel(string host, int port);
     void SetAuthorization(string authorization);
+
+    static void SetGlobalOnWaiting(std::function<void()> onWaiting);
+
     void CancelRequest();
     RequestStatus GetStatus();
     virtual void InitThread();
@@ -97,6 +100,9 @@ private:
     string _authorization;
     int _proxyPort;
     int _debugLevel;
+
+    inline static function<void()> g_onWaiting;
+    static void ExecuteOnWaiting();
 
     void PutPost(const Uri& requestUri, const string& httpMethod, const string& content, function<void(HttpResponse&)> onComplete);
     void InitParser();

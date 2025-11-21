@@ -85,6 +85,13 @@ void SimpleHttpClient::Put(const Uri& requestUri, const string& content, functio
 	PutPost(requestUri, method, content, onComplete);
 }
 
+void SimpleHttpClient::ExecuteOnWaiting() {
+	if (!g_onWaiting)
+		g_onWaiting = []{};
+
+	g_onWaiting();
+}
+
 void SimpleHttpClient::PutPost(const Uri& requestUri, const string& method, const string& content, function<void(HttpResponse&)> onComplete)
 {
 	string request =
@@ -130,6 +137,10 @@ void SimpleHttpClient::SetAuthorization(string authorization)
 	_authorization = authorization;
 }
 
+void SimpleHttpClient::SetGlobalOnWaiting(std::function<void()> onWaiting) {
+	g_onWaiting = onWaiting;
+}
+
 /* Private functions */
 void SimpleHttpClient::Init(string baseUri)
 {
@@ -170,7 +181,7 @@ void SimpleHttpClient::Connect(const Uri& uri, unsigned long stream)
 		(Ptr)request.c_str(),
 		(unsigned short)strlen(request.c_str()),
 		false,
-		[]{},
+		(GiveTimePtr)ExecuteOnWaiting,
 		&_cancel);
 }
 
@@ -307,7 +318,7 @@ bool SimpleHttpClient::Connect()
 
 	// Get remote IP
 	char* hostname = _stunnelHost != "" ? (char*)_stunnelHost.c_str() : (char*)GetRemoteHost(_uri).c_str();
-	err = ConvertStringToAddr(hostname, &ipAddress, []{});
+	err = ConvertStringToAddr(hostname, &ipAddress, (GiveTimePtr)ExecuteOnWaiting);
 	if (err != noErr)
 	{
 		_response.ErrorCode = ConnectionError;
@@ -316,7 +327,7 @@ bool SimpleHttpClient::Connect()
 	}
 
 	// Open a TCP stream
-	err = CreateStream(&_stream, BUF_SIZE, []{}, &_cancel);
+	err = CreateStream(&_stream, BUF_SIZE, (GiveTimePtr)ExecuteOnWaiting, &_cancel);
 	if (err != noErr)
 	{
 		_response.ErrorCode = ConnectionError;
@@ -325,7 +336,7 @@ bool SimpleHttpClient::Connect()
 	}
 
 	// Open a connection
-	err = OpenConnection(_stream, ipAddress, _stunnelPort > 0 ? _stunnelPort : GetRemotePort(_uri), 0, []{}, &_cancel);
+	err = OpenConnection(_stream, ipAddress, _stunnelPort > 0 ? _stunnelPort : GetRemotePort(_uri), 0, (GiveTimePtr)ExecuteOnWaiting, &_cancel);
 	if (err == noErr) {
 		if (_uri.Scheme == "https" && _proxyHost != "")
 		{
@@ -352,7 +363,7 @@ bool SimpleHttpClient::Request()
 		(Ptr)_request.c_str(),
 		(unsigned short)strlen(_request.c_str()),
 		false,
-		[]{},
+		(GiveTimePtr)ExecuteOnWaiting,
 		&_cancel);
 
 	if (err != noErr)
@@ -381,7 +392,7 @@ bool SimpleHttpClient::Response()
 			_stream,
 			(Ptr)&buf, &dataLength,
 			false,
-			[]{},
+			(GiveTimePtr)ExecuteOnWaiting,
 			&_cancel);
 
 		ret = http_parser_execute(&_parser, &_settings, (const char*)&buf, dataLength);
@@ -406,8 +417,8 @@ bool SimpleHttpClient::Response()
 
 void SimpleHttpClient::NetClose()
 {
-	CloseConnection(_stream, []{}, &_cancel);
-	ReleaseStream(_stream, []{}, &_cancel);
+	CloseConnection(_stream, (GiveTimePtr)ExecuteOnWaiting, &_cancel);
+	ReleaseStream(_stream, (GiveTimePtr)ExecuteOnWaiting, &_cancel);
 
 	if (!DoRedirect())
 	{

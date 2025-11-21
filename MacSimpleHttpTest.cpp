@@ -24,6 +24,8 @@ void OnResponse(HttpResponse& response);
 
 int main()
 {
+    SimpleHttpClient::SetGlobalOnWaiting([]{printf("waiting");});
+
     while (_curRequest < arraylen(_requests))
     {
         if (_doRequest)
