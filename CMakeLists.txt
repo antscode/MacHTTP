@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 
 # See: https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
 SET(CMAKE_CXX_FLAGS "-Ofast")
@@ -10,6 +10,8 @@ SET(SSL_ENABLED OFF)
 # ADD_DEFINITIONS (-DMBEDTLS_DEBUG="ON")
 
 add_library(MacHTTP STATIC
+	ThreadedHttpClient.h
+	ThreadedHttpClient.cpp
 	HttpClient.h
 	HttpClient.cpp
 	HttpResponse.h
@@ -33,12 +35,19 @@ ENDIF()
 set_target_properties(MacHTTP PROPERTIES COMPILE_OPTIONS -ffunction-sections)
 set_target_properties(MacHTTP PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
 
-add_application(MacHTTPTest
-	MacHttpTest.cpp
+add_application(MacThreadedHTTPTest
+	tests/MacThreadedHttpTest.cpp
 	size.r
 	CONSOLE
 )
 
+add_application(MacHTTPTest
+	tests/MacHttpTest.cpp
+	size.r
+	CONSOLE
+)
+
+target_link_libraries(MacThreadedHTTPTest MacHTTP)
 target_link_libraries(MacHTTPTest MacHTTP)
 
 install(TARGETS MacHTTP

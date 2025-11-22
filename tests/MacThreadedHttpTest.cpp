@@ -2,7 +2,7 @@
 #include <string.h>
 #include <vector>
 #include <mbedtls/ssl_ciphersuites.h>
-#include "HttpClient.h"
+#include "../ThreadedHttpClient.h"
 
 using namespace std;
 
@@ -18,7 +18,7 @@ string _requests[4][3] =
 
 bool _doRequest = true;
 int _curRequest = 0;
-HttpClient _httpClient;
+ThreadedHttpClient _httpClient;
 
 void DoRequest(string& title, string& url);
 void OnResponse(HttpResponse& response);
